@@ -1,25 +1,11 @@
-// use std::collections::HashSet;
-
-// #[derive(Hash, Eq, PartialEq, Debug)]
-// struct MySchema {
-//     name: String,
-//     other: Option<i32>,
-// }
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-
-//     #[test]
-//     fn boop() {
-//         let mut db = HashSet::new();
-
-//         db.insert(MySchema {
-//             name: String::from("Hi"),
-//             other: None,
-//         });
-//     }
-// }
+//! # About
+//! 
+//! A small-footprint database implamentation, originally designed for the
+//! [zeno](https://gitlab.com/zeno-src/zeno) code editor.
+//! 
+//! Under the surface, tinydb uses a [HashSet]-based table that works in a similar
+//! fashion to SQL-like/Grid based databases. There is soon planned to be a binary
+//! export option for the database, allowing for embedded databases.
 
 use std::collections::HashSet;
 use std::hash;
