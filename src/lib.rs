@@ -19,7 +19,7 @@ pub enum DatabaseError {
     ItemNotFound,
 
     /// A duplicate value was found when adding to the database with
-    /// [Database::allow_dupes] disallowed.
+    /// [Database::strict_dupes] allowed.
     DupeFound,
     /// When [Database::save_path] is required but is not found. This commonly
     /// happens when loading or dumping a database with [Database::save_path]
@@ -33,24 +33,24 @@ pub enum DatabaseError {
 pub struct Database<T: hash::Hash + Eq> {
     pub label: String,
     pub save_path: Option<PathBuf>,
-    pub allow_dupes: bool,
+    pub strict_dupes: bool,
     items: HashSet<T>,
 }
 
 impl<T: hash::Hash + Eq> Database<T> {
     /// Creates a new database instance.
-    pub fn new(label: String, save_path: Option<PathBuf>, allow_dupes: bool) -> Self {
+    pub fn new(label: String, save_path: Option<PathBuf>, strict_dupes: bool) -> Self {
         Database {
             label: label,
             save_path: save_path,
-            allow_dupes: allow_dupes,
+            strict_dupes: strict_dupes,
             items: HashSet::new(),
         }
     }
 
     /// Adds a new item to the in-memory database.
     pub fn add_item(&mut self, item: T) -> Result<(), DatabaseError> {
-        if !self.allow_dupes {
+        if self.strict_dupes {
             if self.items.contains(&item) {
                 return Err(DatabaseError::DupeFound);
             }
@@ -173,18 +173,21 @@ mod tests {
     #[test]
     fn db_dump() -> Result<(), DatabaseError> {
         let mut my_db = Database::new(String::from("Adding test"), Some(PathBuf::from("db/hi.tinydb")), true);
-        let testing_struct = DemoStruct {
-            name: String::from("Xander"),
-            age: 33,
-        };
-
-        let other = DemoStruct {
-            name: String::from("John"),
-            age: 54
-        };
-
-        my_db.add_item(testing_struct)?;
-        my_db.add_item(other)?;
+        
+        for _ in 0..1 {
+            let testing_struct = DemoStruct {
+                name: String::from("Xander"),
+                age: 33,
+            };
+    
+            let other = DemoStruct {
+                name: String::from("John"),
+                age: 54
+            };
+    
+            my_db.add_item(testing_struct)?;
+            my_db.add_item(other)?;
+        }
 
         my_db.dump_db()?;
 
