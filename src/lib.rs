@@ -1,11 +1,18 @@
 //! # About
 //!
 //! A small-footprint database implamentation, originally designed for the
-//! [Zeno](https://gitlab.com/zeno-src/zeno) code editor.
+//! [Zeno](https://gitlab.com/zeno-src/zeno) code editor. This database does not
+//! accept duplicates and will not save a second identical item.
 //!
 //! Under the surface, tinydb uses a [HashSet]-based table that works in a similar
-//! fashion to SQL-like/Grid based databases. There is soon planned to be a binary
-//! export option for the database, allowing for embedded databases.
+//! fashion to SQL-like/Grid based databases.
+//!
+//! # Disclaimer
+//!
+//! This project is not intended to be used inside of any critical systems due to
+//! the nature of dumping/recovery. If you are using this crate as a temporary and
+//! in-memory only database, it should preform at a reasonable speed (as it uses
+//! [HashSet] underneith).
 
 use std::collections::HashSet;
 use std::fs::File;
@@ -30,6 +37,20 @@ pub enum DatabaseError {
     IOError(std::io::Error),
 }
 
+/// The primary database structure, allowing storage of a given generic.
+///
+/// The generic type used should primarily be structures as they resemble a
+/// conventional database model and should implament [hash::Hash] and [Eq].
+///
+/// # Essential operations
+///
+/// - Create: [Database::new]   
+/// - Query: [Database::query_item]
+/// - Update: [Database::update_item]
+/// - Delete: [Database::remove_item]
+/// - Read all: [Database::read_db]
+/// - Dump: [Database::dump_db]
+/// - Load: [Database::load_db]
 pub struct Database<T: hash::Hash + Eq> {
     pub label: String,
     pub save_path: Option<PathBuf>,
@@ -60,8 +81,12 @@ impl<T: hash::Hash + Eq> Database<T> {
         return Ok(());
     }
 
-    /// Removes an item from the database or commonly returns
-    /// [DatabaseError::ItemNotFound].
+    /// Removes an item from the database.
+    /// 
+    /// # Errors
+    /// 
+    /// Will return [DatabaseError::ItemNotFound] if the item that is attempting
+    /// to be deleted was not found.
     pub fn remove_item(&mut self, item: T) -> Result<(), DatabaseError> {
         if self.items.remove(&item) {
             Ok(())
@@ -71,8 +96,6 @@ impl<T: hash::Hash + Eq> Database<T> {
     }
 
     /// Query the database for a specific item.
-    ///
-    /// Behind-the-scenes, this is a simple wrapper around [HashSet.get].
     pub fn query_item(&mut self, item: T) -> Option<&T> {
         self.items.get(&item)
     }
@@ -80,14 +103,28 @@ impl<T: hash::Hash + Eq> Database<T> {
     /// Loads all into database from a `.tinydb` file and **erases any current
     /// in-memory data**.
     ///
-    /// Please ensure that [Database::save_path] is valid before using this.
+    /// # Loading path methods
+    /// 
+    /// The database will usually try to load `\[label\].tinydb` where `\[label\]`
+    /// is the defined [Database::label] (path is reletive to where tinydb was
+    /// executed).
+    ///
+    /// You can also overwrite this behaviour by defining a [Database::save_path]
+    /// when generating the database inside of [Database::new].
     pub fn load_db(&self) {
         unimplemented!();
     }
 
-    /// Dumps database to a new `.tinydb` file.
+    /// Dumps/saves database to a binary file.
+    /// 
+    /// # Saving path methods
+    /// 
+    /// The database will usually save as `\[label\].tinydb` where `\[label\]`
+    /// is the defined [Database::label] (path is reletive to where tinydb was
+    /// executed).
     ///
-    /// Please ensure that [Database::save_path] is valid before using this.
+    /// You can also overwrite this behaviour by defining a [Database::save_path]
+    /// when generating the database inside of [Database::new].
     pub fn dump_db(&self) -> Result<(), DatabaseError> {
         let u8_dump: &[u8] = unsafe { any_as_u8_slice(self) };
 
