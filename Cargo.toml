@@ -5,5 +5,6 @@ version = "0.0.0"
 authors = ["Owez <owez@scalist.net>"]
 edition = "2018"
 repository = "https://gitlab.com/Owez/tinydb"
+license = "GPL-3.0"
 
 [dependencies]
