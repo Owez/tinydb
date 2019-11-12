@@ -20,6 +20,7 @@ use std::hash;
 use std::io::prelude::*;
 use std::path::PathBuf;
 
+/// Database error enum
 #[derive(Debug)]
 pub enum DatabaseError {
     /// When the item queried for was not found
