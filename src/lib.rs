@@ -36,6 +36,10 @@ pub enum DatabaseError {
 
     /// Misc [std::io::Error] that could not be properly handled.
     IOError(std::io::Error),
+
+    /// When the database could not be found. This is typically raised inside of
+    /// [Database::from] when it tries to retrieve the path to the database.
+    DatabaseNotFound,
 }
 
 /// The primary database structure, allowing storage of a given generic.
@@ -45,7 +49,8 @@ pub enum DatabaseError {
 ///
 /// # Essential operations
 ///
-/// - Create: [Database::new]   
+/// - Create: [Database::new]
+/// - Create from file: [Database::from]   
 /// - Query: [Database::query_item]
 /// - Update: [Database::update_item]
 /// - Delete: [Database::remove_item]
@@ -70,6 +75,11 @@ impl<T: hash::Hash + Eq> Database<T> {
         }
     }
 
+    /// Retrives a dump file from [path] and loads it.
+    pub fn from(path: PathBuf) -> Result<Self, DatabaseError> {
+        Ok(unsafe { u8_slice_as_any(get_stream_from_path(path)?.as_slice()) })
+    }
+
     /// Adds a new item to the in-memory database.
     pub fn add_item(&mut self, item: T) -> Result<(), DatabaseError> {
         if self.strict_dupes {
@@ -83,9 +93,9 @@ impl<T: hash::Hash + Eq> Database<T> {
     }
 
     /// Removes an item from the database.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Will return [DatabaseError::ItemNotFound] if the item that is attempting
     /// to be deleted was not found.
     pub fn remove_item(&mut self, item: T) -> Result<(), DatabaseError> {
@@ -105,7 +115,7 @@ impl<T: hash::Hash + Eq> Database<T> {
     /// in-memory data**.
     ///
     /// # Loading path methods
-    /// 
+    ///
     /// The database will usually try to load `\[label\].tinydb` where `\[label\]`
     /// is the defined [Database::label] (path is reletive to where tinydb was
     /// executed).
@@ -117,9 +127,9 @@ impl<T: hash::Hash + Eq> Database<T> {
     }
 
     /// Dumps/saves database to a binary file.
-    /// 
+    ///
     /// # Saving path methods
-    /// 
+    ///
     /// The database will usually save as `\[label\].tinydb` where `\[label\]`
     /// is the defined [Database::label] (path is reletive to where tinydb was
     /// executed).
@@ -136,9 +146,19 @@ impl<T: hash::Hash + Eq> Database<T> {
         Ok(())
     }
 
+    /// Automatically allocates a path for the database if [Database::save_path]
+    /// is not provided. If it is, this function will simply return it.
+    fn smart_path_get(&self) -> PathBuf {
+        if self.save_path.is_none() {
+            return PathBuf::from(format!("{}.tinydb", self.label));
+        }
+
+        PathBuf::from(self.save_path.as_ref().unwrap())
+    }
+
     /// Opens the path given in [Database::save_path] or returns a [DatabaseError].
     fn open_db_path(&self) -> Result<File, DatabaseError> {
-        let definate_path = path_to_dberror(self.save_path.as_ref())?;
+        let definate_path = self.smart_path_get();
 
         if definate_path.exists() {
             io_to_dberror(std::fs::remove_file(&definate_path))?;
@@ -146,6 +166,20 @@ impl<T: hash::Hash + Eq> Database<T> {
 
         io_to_dberror(File::create(&definate_path))
     }
+}
+
+/// Reads a given path and converts it into a &\[[u8]\] (u8 slice) stream.
+fn get_stream_from_path(path: PathBuf) -> Result<Vec<u8>, DatabaseError> {
+    if !path.exists() {
+        return Err(DatabaseError::DatabaseNotFound);
+    }
+
+    let mut got_file = io_to_dberror(File::open(path))?;
+    let mut contents: Vec<u8> = Vec::new();
+
+    io_to_dberror(got_file.read(&mut contents))?;
+
+    Ok(contents)
 }
 
 /// Converts a possible [std::io::Error] to a [DatabaseError].
@@ -156,17 +190,15 @@ fn io_to_dberror<T>(io_res: Result<T, std::io::Error>) -> Result<T, DatabaseErro
     }
 }
 
-/// Converts an [Option]<[PathBuf]> into a [Result]<[PathBuf], [DatabaseError]>.
-fn path_to_dberror(path: Option<&PathBuf>) -> Result<PathBuf, DatabaseError> {
-    match path {
-        None => Err(DatabaseError::SavePathRequired),
-        Some(x) => Ok(x.to_owned()),
-    }
-}
-
 /// Converts a [Sized] generic to a u8 slice.
 unsafe fn any_as_u8_slice<T: Sized>(p: &T) -> &[u8] {
     ::std::slice::from_raw_parts((p as *const T) as *const u8, ::std::mem::size_of::<T>())
+}
+
+/// The inverse of [any_as_u8_slice], converts a &\[[u8]\] (u8 slice) to a given
+/// [Sized]-implamented generic.
+unsafe fn u8_slice_as_any<T: Sized>(slice: &[u8]) -> T {
+    std::ptr::read(slice.as_ptr() as *const _)
 }
 
 #[cfg(test)]
@@ -196,7 +228,7 @@ mod tests {
     /// Tests removal from in-memory db
     #[test]
     fn item_remove() -> Result<(), DatabaseError> {
-        let mut my_db = Database::new(String::from("Adding test"), None, true);
+        let mut my_db = Database::new(String::from("Removal test"), None, true);
 
         let testing_struct = DemoStruct {
             name: String::from("Xander"),
@@ -212,7 +244,7 @@ mod tests {
     #[test]
     fn db_dump() -> Result<(), DatabaseError> {
         let mut my_db = Database::new(
-            String::from("Adding test"),
+            String::from("Dumping test"),
             Some(PathBuf::from("db/test.tinydb")),
             true,
         );
@@ -231,6 +263,17 @@ mod tests {
         }
 
         my_db.dump_db()?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn db_from() -> Result<(), DatabaseError> {
+        db_dump()?; // ensure database was dumped
+
+        let my_db: Database<DemoStruct> = Database::from(PathBuf::from("db/test.tinydb"))?;
+
+        assert_eq!(my_db.label, String::from("Dumping Test"));
 
         Ok(())
     }
