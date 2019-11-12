@@ -1,7 +1,7 @@
 //! # About
 //!
 //! A small-footprint database implamentation, originally designed for the
-//! [zeno](https://gitlab.com/zeno-src/zeno) code editor.
+//! [Zeno](https://gitlab.com/zeno-src/zeno) code editor.
 //!
 //! Under the surface, tinydb uses a [HashSet]-based table that works in a similar
 //! fashion to SQL-like/Grid based databases. There is soon planned to be a binary
@@ -62,10 +62,25 @@ impl<T: hash::Hash + Eq> Database<T> {
     }
 
     /// Query the database for a specific item.
-    /// 
+    ///
     /// Behind-the-scenes, this is a simple wrapper around [HashSet.get].
     pub fn query_item(&mut self, item: T) -> Option<&T> {
         self.items.get(&item)
+    }
+
+    /// Loads all into database from a `.tinydb` file and **erases any current
+    /// in-memory data**.
+    ///
+    /// Please ensure that [Database::save_path] is valid before using this.
+    pub fn load_db(&self) {
+        unimplemented!();
+    }
+
+    /// Dumps database to a new `.tinydb` file.
+    ///
+    /// Please ensure that [Database::save_path] is valid before using this.
+    pub fn dump_db(&self) {
+        unimplemented!();
     }
 }
 
