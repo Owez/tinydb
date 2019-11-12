@@ -10,8 +10,8 @@
 use std::collections::HashSet;
 use std::fs::File;
 use std::hash;
-use std::path::PathBuf;
 use std::io::prelude::*;
+use std::path::PathBuf;
 
 #[derive(Debug)]
 pub enum DatabaseError {
@@ -88,7 +88,7 @@ impl<T: hash::Hash + Eq> Database<T> {
     /// Dumps database to a new `.tinydb` file.
     ///
     /// Please ensure that [Database::save_path] is valid before using this.
-    pub fn dump_db(&self) -> Result<(), DatabaseError>{
+    pub fn dump_db(&self) -> Result<(), DatabaseError> {
         let u8_dump: &[u8] = unsafe { any_as_u8_slice(self) };
 
         let mut dump_file = self.open_db_path()?;
@@ -102,10 +102,11 @@ impl<T: hash::Hash + Eq> Database<T> {
     fn open_db_path(&self) -> Result<File, DatabaseError> {
         let definate_path = path_to_dberror(self.save_path.as_ref())?;
 
-        match File::open(&definate_path) {
-            Ok(x) => Ok(x),
-            Err(_) => Ok(io_to_dberror(File::create(&definate_path))?),
+        if definate_path.exists() {
+            io_to_dberror(std::fs::remove_file(&definate_path))?;
         }
+
+        io_to_dberror(File::create(&definate_path))
     }
 }
 
@@ -172,19 +173,21 @@ mod tests {
 
     #[test]
     fn db_dump() -> Result<(), DatabaseError> {
-        let mut my_db = Database::new(String::from("Adding test"), Some(PathBuf::from("db/hi.tinydb")), true);
-        
+        let mut my_db = Database::new(
+            String::from("Adding test"),
+            Some(PathBuf::from("db/test.tinydb")),
+            true,
+        );
+
         for _ in 0..1 {
             let testing_struct = DemoStruct {
                 name: String::from("Xander"),
                 age: 33,
             };
-    
             let other = DemoStruct {
                 name: String::from("John"),
-                age: 54
+                age: 54,
             };
-    
             my_db.add_item(testing_struct)?;
             my_db.add_item(other)?;
         }
