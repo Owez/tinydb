@@ -1,8 +1,8 @@
 //! # About
-//! 
+//!
 //! A small-footprint database implamentation, originally designed for the
 //! [zeno](https://gitlab.com/zeno-src/zeno) code editor.
-//! 
+//!
 //! Under the surface, tinydb uses a [HashSet]-based table that works in a similar
 //! fashion to SQL-like/Grid based databases. There is soon planned to be a binary
 //! export option for the database, allowing for embedded databases.
@@ -56,10 +56,16 @@ impl<T: hash::Hash + Eq> Database<T> {
     pub fn remove_item(&mut self, item: T) -> Result<(), DatabaseError> {
         if self.items.remove(&item) {
             Ok(())
-        }
-        else {
+        } else {
             Err(DatabaseError::ItemNotFound)
         }
+    }
+
+    /// Query the database for a specific item.
+    /// 
+    /// Behind-the-scenes, this is a simple wrapper around [HashSet.get].
+    pub fn query_item(&mut self, item: T) -> Option<&T> {
+        self.items.get(&item)
     }
 }
 
@@ -78,11 +84,10 @@ mod tests {
     fn db_add() -> Result<(), DatabaseError> {
         let mut my_db = Database::new(String::from("Adding test"), None, true);
 
-        my_db
-            .add_item(DemoStruct {
-                name: String::from("John"),
-                age: 16,
-            })?;
+        my_db.add_item(DemoStruct {
+            name: String::from("John"),
+            age: 16,
+        })?;
 
         Ok(())
     }
