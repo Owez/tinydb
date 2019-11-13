@@ -19,6 +19,7 @@ use std::fs::File;
 use std::hash;
 use std::io::prelude::*;
 use std::path::PathBuf;
+use serde::{Serialize, Deserialize};
 
 /// Database error enum
 #[derive(Debug)]
@@ -57,14 +58,15 @@ pub enum DatabaseError {
 /// - Read all: [Database::read_db]
 /// - Dump: [Database::dump_db]
 /// - Load: [Database::load_db]
-pub struct Database<T: hash::Hash + Eq> {
+#[derive(Serialize)]
+pub struct Database<T: hash::Hash + Eq + Serialize> {
     pub label: String,
     pub save_path: Option<PathBuf>,
     pub strict_dupes: bool,
     items: HashSet<T>,
 }
 
-impl<T: hash::Hash + Eq> Database<T> {
+impl<T: hash::Hash + Eq + Serialize> Database<T> {
     /// Creates a new database instance.
     pub fn new(label: String, save_path: Option<PathBuf>, strict_dupes: bool) -> Self {
         Database {
@@ -77,7 +79,7 @@ impl<T: hash::Hash + Eq> Database<T> {
 
     /// Retrives a dump file from [path] and loads it.
     pub fn from(path: PathBuf) -> Result<Self, DatabaseError> {
-        Ok(unsafe { u8_slice_as_any(get_stream_from_path(path)?.as_slice()) })
+        unimplemented!();
     }
 
     /// Adds a new item to the in-memory database.
@@ -137,11 +139,8 @@ impl<T: hash::Hash + Eq> Database<T> {
     /// You can also overwrite this behaviour by defining a [Database::save_path]
     /// when generating the database inside of [Database::new].
     pub fn dump_db(&self) -> Result<(), DatabaseError> {
-        let u8_dump: &[u8] = unsafe { any_as_u8_slice(self) };
-
         let mut dump_file = self.open_db_path()?;
-
-        io_to_dberror(dump_file.write_all(u8_dump))?;
+        bincode::serialize_into(&mut dump_file, self).unwrap();
 
         Ok(())
     }
@@ -190,23 +189,12 @@ fn io_to_dberror<T>(io_res: Result<T, std::io::Error>) -> Result<T, DatabaseErro
     }
 }
 
-/// Converts a [Sized] generic to a u8 slice.
-unsafe fn any_as_u8_slice<T: Sized>(p: &T) -> &[u8] {
-    ::std::slice::from_raw_parts((p as *const T) as *const u8, ::std::mem::size_of::<T>())
-}
-
-/// The inverse of [any_as_u8_slice], converts a &\[[u8]\] (u8 slice) to a given
-/// [Sized]-implamented generic.
-unsafe fn u8_slice_as_any<T: Sized>(slice: &[u8]) -> T {
-    std::ptr::read(slice.as_ptr() as *const _)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     /// A dummy struct to use inside of tests
-    #[derive(Hash, Eq, PartialEq, Debug)]
+    #[derive(Hash, Eq, PartialEq, Debug, Serialize, Deserialize)]
     struct DemoStruct {
         name: String,
         age: i32,
@@ -267,6 +255,7 @@ mod tests {
         Ok(())
     }
 
+    /// Tests a [Database::from] method call
     #[test]
     fn db_from() -> Result<(), DatabaseError> {
         db_dump()?; // ensure database was dumped
