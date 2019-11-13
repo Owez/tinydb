@@ -13,6 +13,16 @@
 //! the nature of dumping/recovery. If you are using this crate as a temporary and
 //! in-memory only database, it should preform at a reasonable speed (as it uses
 //! [HashSet] underneith).
+//!
+//! # Essential operations
+//!
+//! - Create: [Database::new]
+//! - Create from file: [Database::from]   
+//! - Query: [query_item]
+//! - Update: [Database::update_item]
+//! - Delete: [Database::remove_item]
+//! - Get all: [Database::read_db]
+//! - Dump: [Database::dump_db]
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -20,6 +30,21 @@ use std::fs::File;
 use std::hash;
 use std::io::prelude::*;
 use std::path::PathBuf;
+
+/// An error enum for the possible errors of [Database::query_item] relating
+/// directly to querying.
+#[derive(Debug)]
+pub enum QueryError {
+    /// When the given "database" ([Database]) is not actually a [Database].
+    NotADatabase,
+
+    /// An error was returned from the database itself.
+    DatabaseError(DatabaseError),
+
+    /// When the schema given to search is not valid in terms of the [Database]
+    /// passed in.
+    TypeNotSchema,
+}
 
 /// Database error enum
 #[derive(Debug)]
@@ -47,16 +72,6 @@ pub enum DatabaseError {
 ///
 /// The generic type used should primarily be structures as they resemble a
 /// conventional database model and should implament [hash::Hash] and [Eq].
-///
-/// # Essential operations
-///
-/// - Create: [Database::new]
-/// - Create from file: [Database::from]   
-/// - Query: [Database::query_item]
-/// - Update: [Database::update_item]
-/// - Delete: [Database::remove_item]
-/// - Get all: [Database::read_db]
-/// - Dump: [Database::dump_db]
 #[derive(Serialize)]
 pub struct Database<T: hash::Hash + Eq + Serialize> {
     pub label: String,
@@ -107,11 +122,6 @@ impl<T: hash::Hash + Eq + Serialize> Database<T> {
         }
     }
 
-    /// Query the database for a specific item.
-    pub fn query_item(&mut self, item: T) -> Option<&T> {
-        self.items.get(&item)
-    }
-
     /// Reads all items from database and returns the native HashSet used.
     pub fn read_db(&self) -> &HashSet<T> {
         unimplemented!();
@@ -134,14 +144,42 @@ impl<T: hash::Hash + Eq + Serialize> Database<T> {
         Ok(())
     }
 
-    /// Automatically allocates a path for the database if [Database::save_path]
-    /// is not provided. If it is, this function will simply return it.
-    fn smart_path_get(&self) -> PathBuf {
-        if self.save_path.is_none() {
-            return PathBuf::from(format!("{}.tinydb", self.label));
-        }
-
-        PathBuf::from(self.save_path.as_ref().unwrap())
+    /// Query the database for a specific item.
+    ///
+    /// # Syntax
+    ///
+    /// ```none
+    /// self.query_item(|[p]| [p].[field], [query]);
+    /// ```
+    ///
+    /// - `[p]` The closure (Will be whatever the database currently is saving as a schema).
+    /// - `[field]` The exact field of `p`. If the database doesn't contain structures, don't add the `.[field]`.
+    /// - `[query]` Item to query for. This is a generic and can be of any reasonable type.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use serde::Serialize;
+    /// use tinydb::Database;
+    ///
+    /// #[derive(Eq, Hash, Serialize)]
+    /// struct TestStruct {
+    ///     my_age: i32
+    /// }
+    ///
+    /// fn main() {
+    ///     let my_struct = TestStruct { my_age: 329 };
+    ///     let mut my_db = Database::new(String::from("query_test"), None, false);
+    ///
+    ///     my_db.add_item(&my_struct);
+    ///
+    ///     let results = my_db.query_item(|f| &f.my_age, 329);
+    ///
+    ///     assert_eq!(results, Ok(&my_struct));
+    /// }
+    /// ```
+    pub fn query_item<Q>(&self, value: impl Fn(T) -> T, query: Q) -> Result<T, QueryError> {
+        unimplemented!();
     }
 
     /// Opens the path given in [Database::save_path] or returns a [DatabaseError].
@@ -153,6 +191,16 @@ impl<T: hash::Hash + Eq + Serialize> Database<T> {
         }
 
         io_to_dberror(File::create(&definate_path))
+    }
+
+    /// Automatically allocates a path for the database if [Database::save_path]
+    /// is not provided. If it is, this function will simply return it.
+    fn smart_path_get(&self) -> PathBuf {
+        if self.save_path.is_none() {
+            return PathBuf::from(format!("{}.tinydb", self.label));
+        }
+
+        PathBuf::from(self.save_path.as_ref().unwrap())
     }
 }
 
@@ -226,22 +274,48 @@ mod tests {
             true,
         );
 
-        for _ in 0..1 {
-            let testing_struct = DemoStruct {
-                name: String::from("Xander"),
-                age: 33,
-            };
-            let other = DemoStruct {
-                name: String::from("John"),
-                age: 54,
-            };
-            my_db.add_item(testing_struct)?;
-            my_db.add_item(other)?;
-        }
+        my_db.add_item(DemoStruct {
+            name: String::from("Xander"),
+            age: 33,
+        })?;
+        my_db.add_item(DemoStruct {
+            name: String::from("John"),
+            age: 54,
+        })?;
 
         my_db.dump_db()?;
 
         Ok(())
+    }
+    /// Tests [query_item]
+    #[test]
+    fn query_item_db() {
+        let mut my_db = Database::new(
+            String::from("Query test"),
+            Some(PathBuf::from("test.tinydb")),
+            true,
+        );
+
+        let exp_found = DemoStruct {
+            name: String::from("Lister"),
+            age: 62,
+        }; // Item to find
+
+        my_db.add_item(DemoStruct {
+            name: String::from("Rimmer"),
+            age: 5,
+        });
+        my_db.add_item(DemoStruct {
+            name: String::from("Cat"),
+            age: 10,
+        });
+        my_db.add_item(DemoStruct {
+            name: String::from("Kryten"),
+            age: 3000,
+        });
+        my_db.add_item(exp_found);
+
+        assert_eq!(my_db.query_item(|f| { &f::age }, 62).unwrap(), exp_found); // Query [exp_found] credentials and see if it matches
     }
 
     /// Tests a [Database::from] method call
