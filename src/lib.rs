@@ -14,12 +14,12 @@
 //! in-memory only database, it should preform at a reasonable speed (as it uses
 //! [HashSet] underneith).
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs::File;
 use std::hash;
 use std::io::prelude::*;
 use std::path::PathBuf;
-use serde::{Serialize, Deserialize};
 
 /// Database error enum
 #[derive(Debug)]
@@ -55,9 +55,8 @@ pub enum DatabaseError {
 /// - Query: [Database::query_item]
 /// - Update: [Database::update_item]
 /// - Delete: [Database::remove_item]
-/// - Read all: [Database::read_db]
+/// - Get all: [Database::read_db]
 /// - Dump: [Database::dump_db]
-/// - Load: [Database::load_db]
 #[derive(Serialize)]
 pub struct Database<T: hash::Hash + Eq + Serialize> {
     pub label: String,
@@ -111,21 +110,6 @@ impl<T: hash::Hash + Eq + Serialize> Database<T> {
     /// Query the database for a specific item.
     pub fn query_item(&mut self, item: T) -> Option<&T> {
         self.items.get(&item)
-    }
-
-    /// Loads all into database from a `.tinydb` file and **erases any current
-    /// in-memory data**.
-    ///
-    /// # Loading path methods
-    ///
-    /// The database will usually try to load `\[label\].tinydb` where `\[label\]`
-    /// is the defined [Database::label] (path is reletive to where tinydb was
-    /// executed).
-    ///
-    /// You can also overwrite this behaviour by defining a [Database::save_path]
-    /// when generating the database inside of [Database::new].
-    pub fn load_db(&self) {
-        unimplemented!();
     }
 
     /// Dumps/saves database to a binary file.
