@@ -18,21 +18,20 @@
 //!
 //! - Create: [Database::new]
 //! - Create from file: [Database::from]   
-//! - Query: [query_item]
+//! - Query: [Database::query_item]
 //! - Update: [Database::update_item]
 //! - Delete: [Database::remove_item]
 //! - Get all: [Database::read_db]
 //! - Dump: [Database::dump_db]
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::collections::HashSet;
 use std::fs::File;
 use std::hash;
-use std::io::prelude::*;
 use std::path::PathBuf;
 
-/// An error enum for the possible errors of [Database::query_item] relating
-/// directly to querying.
+/// An error enum for the possible faliure states of [Database::query_item]
+/// but relating directly to querying.
 #[derive(Debug)]
 pub enum QueryError {
     /// When the given "database" ([Database]) is not actually a [Database].
@@ -46,7 +45,7 @@ pub enum QueryError {
     TypeNotSchema,
 }
 
-/// Database error enum
+/// An error enum for the possible faliure states of the [Database] structure.
 #[derive(Debug)]
 pub enum DatabaseError {
     /// When the item queried for was not found
@@ -178,7 +177,7 @@ impl<T: hash::Hash + Eq + Serialize> Database<T> {
     ///     assert_eq!(results, Ok(&my_struct));
     /// }
     /// ```
-    pub fn query_item<Q>(&self, value: impl Fn(T) -> T, query: Q) -> Result<T, QueryError> {
+    pub fn query_item<Q>(&self, value: impl Fn(&T) -> &Q, query: Q) -> Result<&T, QueryError> {
         unimplemented!();
     }
 
@@ -204,20 +203,6 @@ impl<T: hash::Hash + Eq + Serialize> Database<T> {
     }
 }
 
-/// Reads a given path and converts it into a &\[[u8]\] (u8 slice) stream.
-fn get_stream_from_path(path: PathBuf) -> Result<Vec<u8>, DatabaseError> {
-    if !path.exists() {
-        return Err(DatabaseError::DatabaseNotFound);
-    }
-
-    let mut got_file = io_to_dberror(File::open(path))?;
-    let mut contents: Vec<u8> = Vec::new();
-
-    io_to_dberror(got_file.read(&mut contents))?;
-
-    Ok(contents)
-}
-
 /// Converts a possible [std::io::Error] to a [DatabaseError].
 fn io_to_dberror<T>(io_res: Result<T, std::io::Error>) -> Result<T, DatabaseError> {
     match io_res {
@@ -231,7 +216,7 @@ mod tests {
     use super::*;
 
     /// A dummy struct to use inside of tests
-    #[derive(Hash, Eq, PartialEq, Debug, Serialize, Deserialize)]
+    #[derive(Clone, Hash, Eq, PartialEq, Debug, Serialize)]
     struct DemoStruct {
         name: String,
         age: i32,
@@ -287,7 +272,7 @@ mod tests {
 
         Ok(())
     }
-    /// Tests [query_item]
+    /// Tests [Database::query_item]
     #[test]
     fn query_item_db() {
         let mut my_db = Database::new(
@@ -296,26 +281,37 @@ mod tests {
             true,
         );
 
-        let exp_found = DemoStruct {
-            name: String::from("Lister"),
-            age: 62,
-        }; // Item to find
-
         my_db.add_item(DemoStruct {
             name: String::from("Rimmer"),
             age: 5,
-        });
+        }).unwrap();
         my_db.add_item(DemoStruct {
             name: String::from("Cat"),
             age: 10,
-        });
+        }).unwrap();
         my_db.add_item(DemoStruct {
             name: String::from("Kryten"),
             age: 3000,
-        });
-        my_db.add_item(exp_found);
+        }).unwrap();
+        my_db.add_item(DemoStruct {
+            name: String::from("Lister"),
+            age: 62,
+        }).unwrap();
 
-        assert_eq!(my_db.query_item(|f| { &f::age }, 62).unwrap(), exp_found); // Query [exp_found] credentials and see if it matches
+        assert_eq!(
+            my_db.query_item(|f| &f.age, 62).unwrap(),
+            &DemoStruct {
+                name: String::from("Lister"),
+                age: 62,
+            }
+        ); // Finds "Lister" by searching [DemoStruct::age]
+        assert_eq!(
+            my_db.query_item(|f| &f.name, String::from("Cat")).unwrap(),
+            &DemoStruct {
+                name: String::from("Kryten"),
+                age: 3000,
+            }
+        ); // Finds "Cat" by searching [DemoStruct::name]
     }
 
     /// Tests a [Database::from] method call
