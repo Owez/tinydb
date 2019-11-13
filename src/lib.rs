@@ -76,7 +76,7 @@ impl<T: hash::Hash + Eq + Serialize> Database<T> {
         }
     }
 
-    /// Retrives a dump file from [path] and loads it.
+    /// Retrives a dump file from the path given and loads it.
     pub fn from(path: PathBuf) -> Result<Self, DatabaseError> {
         unimplemented!();
     }
@@ -110,6 +110,11 @@ impl<T: hash::Hash + Eq + Serialize> Database<T> {
     /// Query the database for a specific item.
     pub fn query_item(&mut self, item: T) -> Option<&T> {
         self.items.get(&item)
+    }
+
+    /// Reads all items from database and returns the native HashSet used.
+    pub fn read_db(&self) -> &HashSet<T> {
+        unimplemented!();
     }
 
     /// Dumps/saves database to a binary file.
@@ -217,7 +222,7 @@ mod tests {
     fn db_dump() -> Result<(), DatabaseError> {
         let mut my_db = Database::new(
             String::from("Dumping test"),
-            Some(PathBuf::from("db/test.tinydb")),
+            Some(PathBuf::from("test.tinydb")),
             true,
         );
 
