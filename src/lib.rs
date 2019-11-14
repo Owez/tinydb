@@ -24,10 +24,11 @@
 //! - Get all: [Database::read_db]
 //! - Dump: [Database::dump_db]
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs::File;
 use std::hash;
+use std::io::prelude::*;
 use std::path::PathBuf;
 
 /// An error enum for the possible faliure states of [Database::query_item]
@@ -71,16 +72,31 @@ pub enum DatabaseError {
 ///
 /// The generic type used should primarily be structures as they resemble a
 /// conventional database model and should implament [hash::Hash] and [Eq].
-#[derive(Serialize)]
-pub struct Database<T: hash::Hash + Eq + Serialize> {
+#[derive(Serialize, Deserialize)]
+pub struct Database<T: hash::Hash + Eq + Serialize + Deserialize<'_>> {
+    /// Friendly name for the database, preferibly in `slug-form-like-this` as
+    /// this is the fallback path.
     pub label: String,
+
+    /// The overwrite path to save the database as, this is reccomended otherwise
+    /// it will end up as `./Hello\ There.tinydb` if [Database::label] is "Hello
+    /// There".
     pub save_path: Option<PathBuf>,
+
+    /// If the database should return an error if it tries to insert where an
+    /// identical item already is. Setting this as `false` doesn't allow
+    /// duplicates, it just doesn't flag an error.
     pub strict_dupes: bool,
+
+    /// In-memory [HashSet] of all items.
     items: HashSet<T>,
 }
 
-impl<T: hash::Hash + Eq + Serialize> Database<T> {
+impl<T: hash::Hash + Eq + Serialize + Deserialize<'_>> Database<T> {
     /// Creates a new database instance.
+    ///
+    /// - To add a first item, use [Database::add_item].
+    /// - If you'd like to load a dumped database, use [Database::from].
     pub fn new(label: String, save_path: Option<PathBuf>, strict_dupes: bool) -> Self {
         Database {
             label: label,
@@ -90,12 +106,20 @@ impl<T: hash::Hash + Eq + Serialize> Database<T> {
         }
     }
 
-    /// Retrives a dump file from the path given and loads it.
+    /// Retrives a dump file from the path given and loads it as the [Database]
+    /// structure.
     pub fn from(path: PathBuf) -> Result<Self, DatabaseError> {
-        unimplemented!();
+        let stream = get_stream_from_path(path)?;
+        let decoded = bincode::deserialize(&stream[..]).unwrap();
+
+        Ok(decoded)
     }
 
     /// Adds a new item to the in-memory database.
+    ///
+    /// If this is the first item added to the database, please ensure it's the
+    /// only type you'd like to add. Due to generics, the first item you add
+    /// will be set as the type to use (unless removed).
     pub fn add_item(&mut self, item: T) -> Result<(), DatabaseError> {
         if self.strict_dupes {
             if self.items.contains(&item) {
@@ -105,6 +129,14 @@ impl<T: hash::Hash + Eq + Serialize> Database<T> {
 
         self.items.insert(item);
         return Ok(());
+    }
+
+    /// Essentially replaces an item with another item.
+    /// 
+    /// [Database::query_item] can be used in conjunction to find and replace
+    /// values individually if needed.
+    pub fn update_item(&mut self, item: &mut T, new: T) -> Result<(), DatabaseError> {
+        unimplemented!();
     }
 
     /// Removes an item from the database.
@@ -121,7 +153,8 @@ impl<T: hash::Hash + Eq + Serialize> Database<T> {
         }
     }
 
-    /// Reads all items from database and returns the native HashSet used.
+    /// Gets all items from [Database] and returns a reference to the native
+    /// HashSet storage used.
     pub fn read_db(&self) -> &HashSet<T> {
         unimplemented!();
     }
@@ -181,7 +214,7 @@ impl<T: hash::Hash + Eq + Serialize> Database<T> {
         unimplemented!();
     }
 
-    /// Opens the path given in [Database::save_path] or returns a [DatabaseError].
+    /// Opens the path given in [Database::save_path] (or auto-generates a path).
     fn open_db_path(&self) -> Result<File, DatabaseError> {
         let definate_path = self.smart_path_get();
 
@@ -203,6 +236,20 @@ impl<T: hash::Hash + Eq + Serialize> Database<T> {
     }
 }
 
+/// Reads a given path and converts it into a [Vec]<[u8]> stream.
+fn get_stream_from_path(path: PathBuf) -> Result<Vec<u8>, DatabaseError> {
+    if !path.exists() {
+        return Err(DatabaseError::DatabaseNotFound);
+    }
+
+    let mut got_file = io_to_dberror(File::open(path))?;
+    let mut contents: Vec<u8> = Vec::new();
+
+    io_to_dberror(got_file.read(&mut contents))?;
+
+    Ok(contents)
+}
+
 /// Converts a possible [std::io::Error] to a [DatabaseError].
 fn io_to_dberror<T>(io_res: Result<T, std::io::Error>) -> Result<T, DatabaseError> {
     match io_res {
@@ -216,7 +263,7 @@ mod tests {
     use super::*;
 
     /// A dummy struct to use inside of tests
-    #[derive(Clone, Hash, Eq, PartialEq, Debug, Serialize)]
+    #[derive(Clone, Hash, Eq, PartialEq, Debug, Serialize, Deserialize)]
     struct DemoStruct {
         name: String,
         age: i32,
@@ -281,22 +328,30 @@ mod tests {
             true,
         );
 
-        my_db.add_item(DemoStruct {
-            name: String::from("Rimmer"),
-            age: 5,
-        }).unwrap();
-        my_db.add_item(DemoStruct {
-            name: String::from("Cat"),
-            age: 10,
-        }).unwrap();
-        my_db.add_item(DemoStruct {
-            name: String::from("Kryten"),
-            age: 3000,
-        }).unwrap();
-        my_db.add_item(DemoStruct {
-            name: String::from("Lister"),
-            age: 62,
-        }).unwrap();
+        my_db
+            .add_item(DemoStruct {
+                name: String::from("Rimmer"),
+                age: 5,
+            })
+            .unwrap();
+        my_db
+            .add_item(DemoStruct {
+                name: String::from("Cat"),
+                age: 10,
+            })
+            .unwrap();
+        my_db
+            .add_item(DemoStruct {
+                name: String::from("Kryten"),
+                age: 3000,
+            })
+            .unwrap();
+        my_db
+            .add_item(DemoStruct {
+                name: String::from("Lister"),
+                age: 62,
+            })
+            .unwrap();
 
         assert_eq!(
             my_db.query_item(|f| &f.age, 62).unwrap(),
