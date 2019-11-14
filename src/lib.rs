@@ -12,24 +12,28 @@
 //! This project is not intended to be used inside of any critical systems due to
 //! the nature of dumping/recovery. If you are using this crate as a temporary and
 //! in-memory only database, it should preform at a reasonable speed (as it uses
-//! [HashSet] underneith).
+//! [HashSet] underneath).
 //!
 //! # Essential operations
 //!
-//! - Create: [Database::new]
-//! - Create from file: [Database::from]   
-//! - Query: [Database::query_item]
-//! - Update: [Database::update_item]
-//! - Delete: [Database::remove_item]
-//! - Get all: [Database::read_db]
-//! - Dump: [Database::dump_db]
+//! Some commonly-used operations for the [Database] structure.
+//!
+//! | Operation                 | Implamentation          |
+//! |---------------------------|-------------------------|
+//! | Create database           | [Database::new]         |
+//! | Create database from file | [Database::from]        |
+//! | Query for item            | [Database::query_item]  |
+//! | Update/replace item       | [Database::update_item] |
+//! | Delete item               | [Database::remove_item] |
+//! | Get all items             | [Database::read_db]     |
+//! | Dump database             | [Database::dump_db]     |
 
 #![doc(
     html_logo_url = "https://gitlab.com/Owez/tinydb/raw/master/logo.png",
     html_favicon_url = "https://gitlab.com/Owez/tinydb/raw/master/logo.png"
 )]
 
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs::File;
 use std::hash;
@@ -78,7 +82,7 @@ pub enum DatabaseError {
 /// The generic type used should primarily be structures as they resemble a
 /// conventional database model and should implament [hash::Hash] and [Eq].
 #[derive(Serialize, Deserialize)]
-pub struct Database<T: hash::Hash + Eq + Serialize> {
+pub struct Database<T: hash::Hash + Eq> {
     /// Friendly name for the database, preferibly in `slug-form-like-this` as
     /// this is the fallback path.
     pub label: String,
@@ -97,7 +101,7 @@ pub struct Database<T: hash::Hash + Eq + Serialize> {
     items: HashSet<T>,
 }
 
-impl<T: hash::Hash + Eq + Serialize> Database<T> {
+impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     /// Creates a new database instance from given parameters.
     ///
     /// - To add a first item, use [Database::add_item].
@@ -301,8 +305,8 @@ mod tests {
             age: 33,
         };
 
-        my_db.add_item(&testing_struct)?;
-        my_db.remove_item(&testing_struct)?;
+        my_db.add_item(testing_struct.clone())?;
+        my_db.remove_item(testing_struct)?;
 
         Ok(())
     }
