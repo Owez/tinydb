@@ -24,6 +24,11 @@
 //! - Get all: [Database::read_db]
 //! - Dump: [Database::dump_db]
 
+#![doc(
+    html_logo_url = "https://gitlab.com/Owez/tinydb/raw/master/logo.png",
+    html_favicon_url = "https://gitlab.com/Owez/tinydb/raw/master/logo.png"
+)]
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs::File;
@@ -107,7 +112,7 @@ impl<T: hash::Hash + Eq + Serialize> Database<T> {
     }
 
     /// Creates a database from a `.tinydb` file.
-    /// 
+    ///
     /// Retrives a dump file from the path given and loads it as the [Database]
     /// structure.
     pub fn from(path: PathBuf) -> Result<Self, DatabaseError> {
@@ -136,7 +141,7 @@ impl<T: hash::Hash + Eq + Serialize> Database<T> {
     }
 
     /// Essentially replaces an item with another item.
-    /// 
+    ///
     /// [Database::query_item] can be used in conjunction to find and replace
     /// values individually if needed.
     pub fn update_item(&mut self, item: &mut T, new: T) -> Result<(), DatabaseError> {
