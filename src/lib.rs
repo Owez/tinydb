@@ -73,7 +73,7 @@ pub enum DatabaseError {
 /// The generic type used should primarily be structures as they resemble a
 /// conventional database model and should implament [hash::Hash] and [Eq].
 #[derive(Serialize, Deserialize)]
-pub struct Database<T: hash::Hash + Eq + Serialize + Deserialize<'_>> {
+pub struct Database<T: hash::Hash + Eq + Serialize> {
     /// Friendly name for the database, preferibly in `slug-form-like-this` as
     /// this is the fallback path.
     pub label: String,
@@ -92,8 +92,8 @@ pub struct Database<T: hash::Hash + Eq + Serialize + Deserialize<'_>> {
     items: HashSet<T>,
 }
 
-impl<T: hash::Hash + Eq + Serialize + Deserialize<'_>> Database<T> {
-    /// Creates a new database instance.
+impl<T: hash::Hash + Eq + Serialize> Database<T> {
+    /// Creates a new database instance from given parameters.
     ///
     /// - To add a first item, use [Database::add_item].
     /// - If you'd like to load a dumped database, use [Database::from].
@@ -106,13 +106,17 @@ impl<T: hash::Hash + Eq + Serialize + Deserialize<'_>> Database<T> {
         }
     }
 
+    /// Creates a database from a `.tinydb` file.
+    /// 
     /// Retrives a dump file from the path given and loads it as the [Database]
     /// structure.
     pub fn from(path: PathBuf) -> Result<Self, DatabaseError> {
         let stream = get_stream_from_path(path)?;
-        let decoded = bincode::deserialize(&stream[..]).unwrap();
+        // let decoded: Database<T> = bincode::deserialize(&stream[..]).unwrap();
 
-        Ok(decoded)
+        // Ok(decoded)
+
+        unimplemented!();
     }
 
     /// Adds a new item to the in-memory database.
