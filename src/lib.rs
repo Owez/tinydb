@@ -253,7 +253,7 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     ///     assert_eq!(results, Ok(&my_struct));
     /// }
     /// ```
-    pub fn query_item<Q>(&self, value: impl Fn(&T) -> &Q, query: Q) -> Result<&T, QueryError> {
+    pub fn query_item<Q>(&self, value: impl FnOnce(&T) -> &Q, query: Q) -> Result<&T, QueryError> {
         unimplemented!();
     }
 
