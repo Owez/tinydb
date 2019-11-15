@@ -117,15 +117,45 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
 
     /// Creates a database from a `.tinydb` file.
     ///
-    /// Retrives a dump file from the path given and loads it as the [Database]
-    /// structure.
-    pub fn from(path: PathBuf) -> Result<Self, DatabaseError> {
+    /// This retrives a dump file (saved database) from the path given and loads it as the [Database] structure.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use tinydb::Database;
+    ///
+    /// /// Small example structure to show.
+    /// struct ExampleStruct {
+    ///    data: i32
+    /// }
+    ///
+    /// /// Makes a small testing database.
+    /// fn make_db() {
+    ///     let test_db = Database::new(String::from("test"), None, false);
+    ///     test_db.add_item(ExampleStruct { data: 34 });
+    ///     test_db.dump_db();
+    /// }
+    ///
+    /// /// Get `test_db` defined in [make_db] and test.
+    /// fn main() {
+    ///     make_db();
+    ///
+    ///     let got_db = Database::from(
+    ///         |s: &ExampleStruct| &s,
+    ///         PathBuf::from("test.tinydb")
+    ///     );
+    ///
+    ///     assert_eq!(
+    ///         got_db.query_item(|s: &ExampleStruct| &s.data, 34).unwrap(),
+    ///         &ExampleStruct { data: 34 }
+    ///     ); // Check that the database still has added [ExampleStruct].
+    /// }
+    /// ```
+    pub fn from(schema: impl FnOnce(&T) -> &T, path: PathBuf) -> Result<Self, DatabaseError> {
         let stream = get_stream_from_path(path)?;
-        // let decoded: Database<T> = bincode::deserialize(&stream[..]).unwrap();
+        let decoded: Database<T> = bincode::deserialize(&stream[..]).unwrap();
 
-        // Ok(decoded)
-
-        unimplemented!();
+        Ok(decoded)
     }
 
     /// Adds a new item to the in-memory database.
@@ -207,7 +237,7 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     /// use serde::Serialize;
     /// use tinydb::Database;
     ///
-    /// #[derive(Eq, Hash, Serialize)]
+    /// #[derive(Eq, Hash, Serialize, Deserialize)]
     /// struct TestStruct {
     ///     my_age: i32
     /// }
@@ -218,7 +248,7 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     ///
     ///     my_db.add_item(&my_struct);
     ///
-    ///     let results = my_db.query_item(|f| &f.my_age, 329);
+    ///     let results = my_db.query_item(|s: TestStruct| &s.my_age, 329);
     ///
     ///     assert_eq!(results, Ok(&my_struct));
     /// }
@@ -387,7 +417,8 @@ mod tests {
     fn db_from() -> Result<(), DatabaseError> {
         db_dump()?; // ensure database was dumped
 
-        let my_db: Database<DemoStruct> = Database::from(PathBuf::from("db/test.tinydb"))?;
+        let my_db: Database<DemoStruct> =
+            Database::from(|s: &DemoStruct| &s, PathBuf::from("test.tinydb"))?;
 
         assert_eq!(my_db.label, String::from("Dumping Test"));
 
