@@ -23,6 +23,7 @@
 //! | Create database           | [Database::new]         |
 //! | Create database from file | [Database::from]        |
 //! | Query for item            | [Database::query_item]  |
+//! | Contains specific item    | [Database::contains]    |
 //! | Update/replace item       | [Database::update_item] |
 //! | Delete item               | [Database::remove_item] |
 //! | Get all items             | [Database::read_db]     |
@@ -49,6 +50,9 @@ pub enum QueryError {
 
     /// An error was returned from the database itself.
     DatabaseError(DatabaseError),
+
+    /// The database does not contain the query searched for.
+    ItemNotFound,
 
     /// When the schema given to search is not valid in terms of the [Database]
     /// passed in.
@@ -146,7 +150,7 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     ///     );
     ///
     ///     assert_eq!(
-    ///         got_db.query_item(|s: &ExampleStruct| &s.data, 34).unwrap(),
+    ///         got_db.query_item(|s: ExampleStruct| &s.data, 34).unwrap(),
     ///         &ExampleStruct { data: 34 }
     ///     ); // Check that the database still has added [ExampleStruct].
     /// }
@@ -254,6 +258,18 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     /// }
     /// ```
     pub fn query_item<Q>(&self, value: impl FnOnce(&T) -> &Q, query: Q) -> Result<&T, QueryError> {
+        for item in self.items.iter() {
+            // if  {
+            //     return Ok(item);
+            // }
+        }
+
+        Err(QueryError::ItemNotFound)
+    }
+
+    /// Searches the database for a specific value. If it does not exist, this
+    /// method will return [QueryError::ItemNotFound].
+    pub fn contains(&self, query: &T) -> Result<(), QueryError> {
         unimplemented!();
     }
 
