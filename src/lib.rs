@@ -41,45 +41,7 @@ use std::hash;
 use std::io::prelude::*;
 use std::path::PathBuf;
 
-/// An error enum for the possible faliure states of [Database::query_item]
-/// but relating directly to querying.
-#[derive(Debug)]
-pub enum QueryError {
-    /// When the given "database" ([Database]) is not actually a [Database].
-    NotADatabase,
-
-    /// An error was returned from the database itself.
-    DatabaseError(DatabaseError),
-
-    /// The database does not contain the query searched for.
-    ItemNotFound,
-
-    /// When the schema given to search is not valid in terms of the [Database]
-    /// passed in.
-    TypeNotSchema,
-}
-
-/// An error enum for the possible faliure states of the [Database] structure.
-#[derive(Debug)]
-pub enum DatabaseError {
-    /// When the item queried for was not found
-    ItemNotFound,
-
-    /// A duplicate value was found when adding to the database with
-    /// [Database::strict_dupes] allowed.
-    DupeFound,
-    /// When [Database::save_path] is required but is not found. This commonly
-    /// happens when loading or dumping a database with [Database::save_path]
-    /// being [Option::None].
-    SavePathRequired,
-
-    /// Misc [std::io::Error] that could not be properly handled.
-    IOError(std::io::Error),
-
-    /// When the database could not be found. This is typically raised inside of
-    /// [Database::from] when it tries to retrieve the path to the database.
-    DatabaseNotFound,
-}
+pub mod error;
 
 /// The primary database structure, allowing storage of a given generic.
 ///
@@ -155,7 +117,7 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     ///     ); // Check that the database still has added [ExampleStruct].
     /// }
     /// ```
-    pub fn from(schema: impl FnOnce(&T) -> &T, path: PathBuf) -> Result<Self, DatabaseError> {
+    pub fn from(schema: impl FnOnce(&T) -> &T, path: PathBuf) -> Result<Self, error::DatabaseError> {
         let stream = get_stream_from_path(path)?;
         let decoded: Database<T> = bincode::deserialize(&stream[..]).unwrap();
 
@@ -167,10 +129,10 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     /// If this is the first item added to the database, please ensure it's the
     /// only type you'd like to add. Due to generics, the first item you add
     /// will be set as the type to use (unless removed).
-    pub fn add_item(&mut self, item: T) -> Result<(), DatabaseError> {
+    pub fn add_item(&mut self, item: T) -> Result<(), error::DatabaseError> {
         if self.strict_dupes {
             if self.items.contains(&item) {
-                return Err(DatabaseError::DupeFound);
+                return Err(error::DatabaseError::DupeFound);
             }
         }
 
@@ -182,7 +144,7 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     ///
     /// [Database::query_item] can be used in conjunction to find and replace
     /// values individually if needed.
-    pub fn update_item(&mut self, item: &mut T, new: T) -> Result<(), DatabaseError> {
+    pub fn update_item(&mut self, item: &mut T, new: T) -> Result<(), error::DatabaseError> {
         unimplemented!();
     }
 
@@ -190,13 +152,13 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     ///
     /// # Errors
     ///
-    /// Will return [DatabaseError::ItemNotFound] if the item that is attempting
+    /// Will return [error::DatabaseError::ItemNotFound] if the item that is attempting
     /// to be deleted was not found.
-    pub fn remove_item(&mut self, item: T) -> Result<(), DatabaseError> {
+    pub fn remove_item(&mut self, item: T) -> Result<(), error::DatabaseError> {
         if self.items.remove(&item) {
             Ok(())
         } else {
-            Err(DatabaseError::ItemNotFound)
+            Err(error::DatabaseError::ItemNotFound)
         }
     }
 
@@ -216,7 +178,7 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     ///
     /// You can also overwrite this behaviour by defining a [Database::save_path]
     /// when generating the database inside of [Database::new].
-    pub fn dump_db(&self) -> Result<(), DatabaseError> {
+    pub fn dump_db(&self) -> Result<(), error::DatabaseError> {
         let mut dump_file = self.open_db_path()?;
         bincode::serialize_into(&mut dump_file, self).unwrap();
 
@@ -257,24 +219,24 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     ///     assert_eq!(results, Ok(&my_struct));
     /// }
     /// ```
-    pub fn query_item<Q>(&self, value: impl FnOnce(&T) -> &Q, query: Q) -> Result<&T, QueryError> {
+    pub fn query_item<Q>(&self, value: impl FnOnce(&T) -> &Q, query: Q) -> Result<&T, error::QueryError> {
         for item in self.items.iter() {
             // if  {
             //     return Ok(item);
             // }
         }
 
-        Err(QueryError::ItemNotFound)
+        Err(error::QueryError::ItemNotFound)
     }
 
     /// Searches the database for a specific value. If it does not exist, this
-    /// method will return [QueryError::ItemNotFound].
-    pub fn contains(&self, query: &T) -> Result<(), QueryError> {
+    /// method will return [error::QueryError::ItemNotFound].
+    pub fn contains(&self, query: &T) -> Result<(), error::QueryError> {
         unimplemented!();
     }
 
     /// Opens the path given in [Database::save_path] (or auto-generates a path).
-    fn open_db_path(&self) -> Result<File, DatabaseError> {
+    fn open_db_path(&self) -> Result<File, error::DatabaseError> {
         let definate_path = self.smart_path_get();
 
         if definate_path.exists() {
@@ -298,9 +260,9 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
 /// Reads a given path and converts it into a [Vec]<[u8]> stream.
 /// 
 /// TODO update or delete.
-fn get_stream_from_path(path: PathBuf) -> Result<Vec<u8>, DatabaseError> {
+fn get_stream_from_path(path: PathBuf) -> Result<Vec<u8>, error::DatabaseError> {
     if !path.exists() {
-        return Err(DatabaseError::DatabaseNotFound);
+        return Err(error::DatabaseError::DatabaseNotFound);
     }
 
     let mut got_file = io_to_dberror(File::open(path))?;
@@ -311,11 +273,11 @@ fn get_stream_from_path(path: PathBuf) -> Result<Vec<u8>, DatabaseError> {
     Ok(contents)
 }
 
-/// Converts a possible [std::io::Error] to a [DatabaseError].
-fn io_to_dberror<T>(io_res: Result<T, std::io::Error>) -> Result<T, DatabaseError> {
+/// Converts a possible [std::io::Error] to a [error::DatabaseError].
+fn io_to_dberror<T>(io_res: Result<T, std::io::Error>) -> Result<T, error::DatabaseError> {
     match io_res {
         Ok(x) => Ok(x),
-        Err(e) => Err(DatabaseError::IOError(e)),
+        Err(e) => Err(error::DatabaseError::IOError(e)),
     }
 }
 
@@ -332,7 +294,7 @@ mod tests {
 
     /// Tests addition to in-memory db
     #[test]
-    fn item_add() -> Result<(), DatabaseError> {
+    fn item_add() -> Result<(), error::DatabaseError> {
         let mut my_db = Database::new(String::from("Adding test"), None, true);
 
         my_db.add_item(DemoStruct {
@@ -345,7 +307,7 @@ mod tests {
 
     /// Tests removal from in-memory db
     #[test]
-    fn item_remove() -> Result<(), DatabaseError> {
+    fn item_remove() -> Result<(), error::DatabaseError> {
         let mut my_db = Database::new(String::from("Removal test"), None, true);
 
         let testing_struct = DemoStruct {
@@ -360,7 +322,7 @@ mod tests {
     }
 
     #[test]
-    fn db_dump() -> Result<(), DatabaseError> {
+    fn db_dump() -> Result<(), error::DatabaseError> {
         let mut my_db = Database::new(
             String::from("Dumping test"),
             Some(PathBuf::from("test.tinydb")),
@@ -432,7 +394,7 @@ mod tests {
 
     /// Tests a [Database::from] method call
     #[test]
-    fn db_from() -> Result<(), DatabaseError> {
+    fn db_from() -> Result<(), error::DatabaseError> {
         db_dump()?; // ensure database was dumped
 
         let my_db: Database<DemoStruct> =
