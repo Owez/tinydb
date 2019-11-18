@@ -296,6 +296,8 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
 }
 
 /// Reads a given path and converts it into a [Vec]<[u8]> stream.
+/// 
+/// TODO update or delete.
 fn get_stream_from_path(path: PathBuf) -> Result<Vec<u8>, DatabaseError> {
     if !path.exists() {
         return Err(DatabaseError::DatabaseNotFound);
