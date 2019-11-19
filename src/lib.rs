@@ -219,7 +219,7 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     ///     assert_eq!(results, Ok(&my_struct));
     /// }
     /// ```
-    pub fn query_item<Q>(&self, value: impl FnOnce(&T) -> &Q, query: Q) -> Result<&T, error::QueryError> {
+    pub fn query_item<Q>(&self, value: impl FnOnce(T) -> Q, query: Q) -> Result<&T, error::QueryError> {
         for item in self.items.iter() {
             // if  {
             //     return Ok(item);
@@ -377,14 +377,14 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            my_db.query_item(|f| &f.age, 62).unwrap(),
+            my_db.query_item(|f| f.age, 62).unwrap(),
             &DemoStruct {
                 name: String::from("Lister"),
                 age: 62,
             }
         ); // Finds "Lister" by searching [DemoStruct::age]
         assert_eq!(
-            my_db.query_item(|f| &f.name, String::from("Cat")).unwrap(),
+            my_db.query_item(|f| f.name, String::from("Cat")).unwrap(),
             &DemoStruct {
                 name: String::from("Kryten"),
                 age: 3000,
