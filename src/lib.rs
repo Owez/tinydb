@@ -164,6 +164,9 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
 
     /// Gets all items from [Database] and returns a reference to the native
     /// HashSet storage used.
+    /// 
+    /// The resulting [HashSet] will be the entirety of the database (though as
+    /// a referance) so act carefully when handling.
     pub fn read_db(&self) -> &HashSet<T> {
         unimplemented!();
     }
@@ -231,6 +234,27 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
 
     /// Searches the database for a specific value. If it does not exist, this
     /// method will return [error::QueryError::ItemNotFound].
+    /// 
+    /// # Examples
+    /// 
+    /// ```rust
+    /// use tinydb::Database;
+    /// use serde::{Serialize, Deserialize};
+    /// 
+    /// #[derive(Hash, Eq, Serialize, Deserialize)]
+    /// struct ExampleStruct {
+    ///     item: i32
+    /// }
+    /// 
+    /// fn main() {
+    ///     let exp_struct = ExampleStruct { item: 4942 };
+    ///     let db = Database::new(String::from("Contains example"), None, false);
+    /// 
+    ///     db.add_item(&exp_struct);
+    /// 
+    ///     assert!(db.contains(&exp_struct));
+    /// }
+    /// ```
     pub fn contains(&self, query: &T) -> Result<(), error::QueryError> {
         unimplemented!();
     }
