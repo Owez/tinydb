@@ -117,7 +117,10 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     ///     ); // Check that the database still has added [ExampleStruct].
     /// }
     /// ```
-    pub fn from(schema: impl FnOnce(&T) -> &T, path: PathBuf) -> Result<Self, error::DatabaseError> {
+    pub fn from(
+        schema: impl FnOnce(&T) -> &T,
+        path: PathBuf,
+    ) -> Result<Self, error::DatabaseError> {
         let stream = get_stream_from_path(path)?;
         let decoded: Database<T> = bincode::deserialize(&stream[..]).unwrap();
 
@@ -164,7 +167,7 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
 
     /// Gets all items from [Database] and returns a reference to the native
     /// HashSet storage used.
-    /// 
+    ///
     /// The resulting [HashSet] will be the entirety of the database (though as
     /// a referance) so act carefully when handling.
     pub fn read_db(&self) -> &HashSet<T> {
@@ -207,22 +210,26 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     /// use tinydb::Database;
     ///
     /// #[derive(Eq, Hash, Serialize, Deserialize)]
-    /// struct TestStruct {
+    /// struct ExampleStruct {
     ///     my_age: i32
     /// }
     ///
     /// fn main() {
-    ///     let my_struct = TestStruct { my_age: 329 };
+    ///     let my_struct = ExampleStruct { my_age: 329 };
     ///     let mut my_db = Database::new(String::from("query_test"), None, false);
     ///
     ///     my_db.add_item(&my_struct);
     ///
-    ///     let results = my_db.query_item(|s: TestStruct| &s.my_age, 329);
+    ///     let results = my_db.query_item(|s: ExampleStruct| s.my_age, 329);
     ///
     ///     assert_eq!(results, Ok(&my_struct));
     /// }
     /// ```
-    pub fn query_item<Q>(&self, value: impl FnOnce(T) -> Q, query: Q) -> Result<&T, error::QueryError> {
+    pub fn query_item<Q>(
+        &self,
+        value: impl FnOnce(T) -> Q,
+        query: Q,
+    ) -> Result<&T, error::QueryError> {
         for item in self.items.iter() {
             // if  {
             //     return Ok(item);
@@ -234,29 +241,31 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
 
     /// Searches the database for a specific value. If it does not exist, this
     /// method will return [error::QueryError::ItemNotFound].
-    /// 
+    ///
+    /// This is a wrapper around [HashSet::contains].
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```rust
     /// use tinydb::Database;
     /// use serde::{Serialize, Deserialize};
-    /// 
+    ///
     /// #[derive(Hash, Eq, Serialize, Deserialize)]
     /// struct ExampleStruct {
     ///     item: i32
     /// }
-    /// 
+    ///
     /// fn main() {
     ///     let exp_struct = ExampleStruct { item: 4942 };
     ///     let db = Database::new(String::from("Contains example"), None, false);
-    /// 
+    ///
     ///     db.add_item(&exp_struct);
-    /// 
-    ///     assert!(db.contains(&exp_struct));
+    ///
+    ///     assert_eq!(db.contains(&exp_struct), true);
     /// }
     /// ```
-    pub fn contains(&self, query: &T) -> Result<(), error::QueryError> {
-        unimplemented!();
+    pub fn contains(&self, query: &T) -> bool {
+        self.items.contains(query)
     }
 
     /// Opens the path given in [Database::save_path] (or auto-generates a path).
@@ -282,7 +291,7 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
 }
 
 /// Reads a given path and converts it into a [Vec]<[u8]> stream.
-/// 
+///
 /// TODO update or delete.
 fn get_stream_from_path(path: PathBuf) -> Result<Vec<u8>, error::DatabaseError> {
     if !path.exists() {
@@ -427,5 +436,19 @@ mod tests {
         assert_eq!(my_db.label, String::from("Dumping Test"));
 
         Ok(())
+    }
+
+    /// Test if the database contains that exact item, related to
+    /// [Database::contains].
+    #[test]
+    fn db_contains() {
+        let exp_struct = DemoStruct {
+            name: String::from("Xander"),
+            age: 33,
+        };
+
+        let mut db = Database::new(String::from("Contains example"), None, false);
+        db.add_item(exp_struct.clone()).unwrap();
+        assert_eq!(db.contains(&exp_struct), true);
     }
 }
