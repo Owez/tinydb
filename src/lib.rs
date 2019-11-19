@@ -28,6 +28,41 @@
 //! | Delete item               | [Database::remove_item] |
 //! | Get all items             | [Database::read_db]     |
 //! | Dump database             | [Database::dump_db]     |
+//! 
+//! # Examples
+//! 
+//! Adding an item then deleting the same item by finding it in the database:
+//! 
+//! ```rust
+//! use tinydb::Database;
+//! 
+//! /// A structure to test the capabilities of TinyDB. This requires [Hash],
+//! /// [Eq], [Serialize] and [Deserialize] (final two being for file operations).
+//! #[derive(Hash, Eq)]
+//! struct ExampleStruct {
+//!     age: i32,
+//!     other_int: i8
+//! }
+//! 
+//! fn main() {
+//!     let mut db = Database::new(
+//!         String::from("test-db"),
+//!         None,
+//!         false
+//!     ); // Creates the database.
+//! 
+//!     db.add_item(
+//!         ExampleStruct { age: 595, other_int: 34 }
+//!     ); // Adds an item to the database.
+//! 
+//!     let got_item = db.query_item(
+//!         |s: ExampleStruct| s.age,
+//!         595
+//!     ).unwrap(); // Returns the item with [ExampleStruct::age] of 595.
+//! 
+//!     db.remove_item(got_item).unwrap(); // Will remove the item found from the database
+//! }
+//! ```
 
 #![doc(
     html_logo_url = "https://gitlab.com/Owez/tinydb/raw/master/logo.png",
@@ -43,19 +78,27 @@ use std::path::PathBuf;
 
 pub mod error;
 
-/// The primary database structure, allowing storage of a given generic.
+/// The primary database structure, allowing storage of a generic type with
+/// dumping/saving options avalible.
 ///
 /// The generic type used should primarily be structures as they resemble a
-/// conventional database model and should implament [hash::Hash] and [Eq].
+/// conventional database model and should implament [hash::Hash] and [Eq] for
+/// basic in-memory storage with [Serialize] and [Deserialize] being implamented
+/// for file operations involving the database (these are also required).
 #[derive(Serialize, Deserialize)]
 pub struct Database<T: hash::Hash + Eq> {
     /// Friendly name for the database, preferibly in `slug-form-like-this` as
     /// this is the fallback path.
+    /// 
+    /// This is used when dumping the database without a [Database::save_path]
+    /// being defined and a friendly way to order a database.
     pub label: String,
 
     /// The overwrite path to save the database as, this is reccomended otherwise
     /// it will end up as `./Hello\ There.tinydb` if [Database::label] is "Hello
     /// There".
+    /// 
+    /// Primarily used inside of [Database::dump_db].
     pub save_path: Option<PathBuf>,
 
     /// If the database should return an error if it tries to insert where an
@@ -140,7 +183,8 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
         return Ok(());
     }
 
-    /// Essentially replaces an item with another item.
+    /// **WORK IN PROGRESS** - Replaces an item inside of the database with another
+    /// item, used for updating/replacing items easily.
     ///
     /// [Database::query_item] can be used in conjunction to find and replace
     /// values individually if needed.
@@ -149,6 +193,9 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     }
 
     /// Removes an item from the database.
+    /// 
+    /// See [Database::update_item] if you'd like to update/replace an item easily,
+    /// rather than individually deleting and adding.
     ///
     /// # Errors
     ///
@@ -162,8 +209,8 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
         }
     }
 
-    /// Gets all items from [Database] and returns a reference to the native
-    /// HashSet storage used.
+    /// **WORK IN PROGRESS** - Gets all items from [Database] and returns a
+    /// reference to the native HashSet storage used.
     ///
     /// The resulting [HashSet] will be the entirety of the database (though as
     /// a referance) so act carefully when handling.
@@ -188,7 +235,7 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
         Ok(())
     }
 
-    /// Query the database for a specific item.
+    /// **WORK IN PROGRESS** - Query the database for a specific item.
     ///
     /// # Syntax
     ///
