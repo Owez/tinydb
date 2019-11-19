@@ -117,9 +117,7 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     ///     ); // Check that the database still has added [ExampleStruct].
     /// }
     /// ```
-    pub fn from(
-        path: PathBuf,
-    ) -> Result<Self, error::DatabaseError> {
+    pub fn from(path: PathBuf) -> Result<Self, error::DatabaseError> {
         let stream = get_stream_from_path(path)?;
         let decoded: Database<T> = bincode::deserialize(&stream[..]).unwrap();
 
@@ -427,8 +425,7 @@ mod tests {
     fn db_from() -> Result<(), error::DatabaseError> {
         db_dump()?; // ensure database was dumped
 
-        let my_db: Database<DemoStruct> =
-            Database::from(PathBuf::from("test.tinydb"))?;
+        let my_db: Database<DemoStruct> = Database::from(PathBuf::from("test.tinydb"))?;
 
         assert_eq!(my_db.label, String::from("Dumping test"));
 
