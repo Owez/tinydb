@@ -118,7 +118,6 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     /// }
     /// ```
     pub fn from(
-        schema: impl FnOnce(&T) -> &T,
         path: PathBuf,
     ) -> Result<Self, error::DatabaseError> {
         let stream = get_stream_from_path(path)?;
@@ -291,19 +290,17 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
 }
 
 /// Reads a given path and converts it into a [Vec]<[u8]> stream.
-///
-/// TODO update or delete.
 fn get_stream_from_path(path: PathBuf) -> Result<Vec<u8>, error::DatabaseError> {
     if !path.exists() {
         return Err(error::DatabaseError::DatabaseNotFound);
     }
 
-    let mut got_file = io_to_dberror(File::open(path))?;
-    let mut contents: Vec<u8> = Vec::new();
+    let mut file = io_to_dberror(File::open(path))?;
+    let mut buffer = Vec::new();
 
-    io_to_dberror(got_file.read(&mut contents))?;
+    io_to_dberror(file.read_to_end(&mut buffer))?;
 
-    Ok(contents)
+    Ok(buffer)
 }
 
 /// Converts a possible [std::io::Error] to a [error::DatabaseError].
@@ -431,9 +428,9 @@ mod tests {
         db_dump()?; // ensure database was dumped
 
         let my_db: Database<DemoStruct> =
-            Database::from(|s: &DemoStruct| &s, PathBuf::from("test.tinydb"))?;
+            Database::from(PathBuf::from("test.tinydb"))?;
 
-        assert_eq!(my_db.label, String::from("Dumping Test"));
+        assert_eq!(my_db.label, String::from("Dumping test"));
 
         Ok(())
     }
