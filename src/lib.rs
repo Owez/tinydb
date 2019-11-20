@@ -278,9 +278,7 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
         query: Q,
     ) -> Result<&T, error::QueryError> {
         for item in self.items.iter() {
-            let res = value(item);
-
-            if res == &query {
+            if value(item) == &query {
                 return Ok(item);
             }
         }
