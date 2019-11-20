@@ -4,18 +4,11 @@
 /// but relating directly to querying.
 #[derive(Debug)]
 pub enum QueryError {
-    /// When the given "database" ([crate::Database]) is not actually a [crate::Database].
-    NotADatabase,
-
     /// An error was returned from the database itself.
     DatabaseError(DatabaseError),
 
     /// The database does not contain the query searched for.
     ItemNotFound,
-
-    /// When the schema given to search is not valid in terms of the [crate::Database]
-    /// passed in.
-    TypeNotSchema,
 }
 
 /// An error enum for the possible faliure states of the [crate::Database] structure.
