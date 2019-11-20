@@ -28,41 +28,6 @@
 //! | Delete item               | [Database::remove_item] |
 //! | Get all items             | [Database::read_db]     |
 //! | Dump database             | [Database::dump_db]     |
-//!
-//! # Examples
-//!
-//! Adding an item then deleting the same item by finding it in the database:
-//!
-//! ```rust
-//! use tinydb::Database;
-//!
-//! /// A structure to test the capabilities of TinyDB. This requires [Hash],
-//! /// [Eq], [Serialize] and [Deserialize] (final two being for file operations).
-//! #[derive(Hash, Eq)]
-//! struct ExampleStruct {
-//!     age: i32,
-//!     other_int: i8
-//! }
-//!
-//! fn main() {
-//!     let mut db = Database::new(
-//!         String::from("test-db"),
-//!         None,
-//!         false
-//!     ); // Creates the database.
-//!
-//!     db.add_item(
-//!         ExampleStruct { age: 595, other_int: 34 }
-//!     ); // Adds an item to the database.
-//!
-//!     let got_item = db.query_item(
-//!         |s: ExampleStruct| s.age,
-//!         595
-//!     ).unwrap(); // Returns the item with [ExampleStruct::age] of 595.
-//!
-//!     db.remove_item(got_item).unwrap(); // Will remove the item found from the database
-//! }
-//! ```
 
 #![doc(
     html_logo_url = "https://gitlab.com/Owez/tinydb/raw/master/logo.png",
@@ -132,15 +97,18 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     ///
     /// ```rust
     /// use tinydb::Database;
+    /// use serde::{Serialize, Deserialize};
+    /// use std::path::PathBuf;
     ///
     /// /// Small example structure to show.
+    /// #[derive(Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
     /// struct ExampleStruct {
     ///    data: i32
     /// }
     ///
     /// /// Makes a small testing database.
     /// fn make_db() {
-    ///     let test_db = Database::new(String::from("test"), None, false);
+    ///     let mut test_db = Database::new(String::from("test"), None, false);
     ///     test_db.add_item(ExampleStruct { data: 34 });
     ///     test_db.dump_db();
     /// }
@@ -150,12 +118,11 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     ///     make_db();
     ///
     ///     let got_db = Database::from(
-    ///         |s: &ExampleStruct| &s,
     ///         PathBuf::from("test.tinydb")
-    ///     );
+    ///     ).unwrap();
     ///
     ///     assert_eq!(
-    ///         got_db.query_item(|s: ExampleStruct| &s.data, 34).unwrap(),
+    ///         got_db.query_item(|s: &ExampleStruct| &s.data, 34).unwrap(),
     ///         &ExampleStruct { data: 34 }
     ///     ); // Check that the database still has added [ExampleStruct].
     /// }
@@ -253,10 +220,10 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     /// # Examples
     ///
     /// ```rust
-    /// use serde::Serialize;
+    /// use serde::{Serialize, Deserialize};
     /// use tinydb::Database;
     ///
-    /// #[derive(Eq, Hash, Serialize, Deserialize)]
+    /// #[derive(Debug, Eq, PartialEq, Hash, Serialize, Deserialize, Clone)]
     /// struct ExampleStruct {
     ///     my_age: i32
     /// }
@@ -265,11 +232,11 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     ///     let my_struct = ExampleStruct { my_age: 329 };
     ///     let mut my_db = Database::new(String::from("query_test"), None, false);
     ///
-    ///     my_db.add_item(&my_struct);
+    ///     my_db.add_item(my_struct.clone());
     ///
-    ///     let results = my_db.query_item(|s: ExampleStruct| s.my_age, 329);
+    ///     let results = my_db.query_item(|s: &ExampleStruct| &s.my_age, 329);
     ///
-    ///     assert_eq!(results, Ok(&my_struct));
+    ///     assert_eq!(results.unwrap(), &my_struct);
     /// }
     /// ```
     pub fn query_item<Q: PartialEq, V: Fn(&T) -> &Q>(
@@ -297,16 +264,16 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     /// use tinydb::Database;
     /// use serde::{Serialize, Deserialize};
     ///
-    /// #[derive(Hash, Eq, Serialize, Deserialize)]
+    /// #[derive(Hash, Eq, PartialEq, Serialize, Deserialize, Copy, Clone)]
     /// struct ExampleStruct {
     ///     item: i32
     /// }
     ///
     /// fn main() {
     ///     let exp_struct = ExampleStruct { item: 4942 };
-    ///     let db = Database::new(String::from("Contains example"), None, false);
+    ///     let mut db = Database::new(String::from("Contains example"), None, false);
     ///
-    ///     db.add_item(&exp_struct);
+    ///     db.add_item(exp_struct.clone());
     ///
     ///     assert_eq!(db.contains(&exp_struct), true);
     /// }
