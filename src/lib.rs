@@ -272,15 +272,17 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     ///     assert_eq!(results, Ok(&my_struct));
     /// }
     /// ```
-    pub fn query_item<Q, V: FnOnce(T) -> Q>(
+    pub fn query_item<Q: PartialEq, V: Copy + FnOnce(&T) -> &Q>(
         &self,
         value: V,
         query: Q,
     ) -> Result<&T, error::QueryError> {
         for item in self.items.iter() {
-            // if  {
-            //     return Ok(item);
-            // }
+            let res = value(item).clone();
+
+            if res == &query {
+                return Ok(item);
+            }
         }
 
         Err(error::QueryError::ItemNotFound)
@@ -455,17 +457,17 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            my_db.query_item(|f| f.age, 62).unwrap(),
+            my_db.query_item(|f| &f.age, 62).unwrap(),
             &DemoStruct {
                 name: String::from("Lister"),
                 age: 62,
             }
         ); // Finds "Lister" by searching [DemoStruct::age]
         assert_eq!(
-            my_db.query_item(|f| f.name, String::from("Cat")).unwrap(),
+            my_db.query_item(|f| &f.name, String::from("Cat")).unwrap(),
             &DemoStruct {
-                name: String::from("Kryten"),
-                age: 3000,
+                name: String::from("Cat"),
+                age: 10,
             }
         ); // Finds "Cat" by searching [DemoStruct::name]
     }
