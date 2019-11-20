@@ -272,7 +272,7 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     ///     assert_eq!(results, Ok(&my_struct));
     /// }
     /// ```
-    pub fn query_item<Q: PartialEq, V: Copy + Fn(&T) -> &Q>(
+    pub fn query_item<Q: PartialEq, V: Fn(&T) -> &Q>(
         &self,
         value: V,
         query: Q,
