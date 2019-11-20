@@ -28,14 +28,14 @@
 //! | Delete item               | [Database::remove_item] |
 //! | Get all items             | [Database::read_db]     |
 //! | Dump database             | [Database::dump_db]     |
-//! 
+//!
 //! # Examples
-//! 
+//!
 //! Adding an item then deleting the same item by finding it in the database:
-//! 
+//!
 //! ```rust
 //! use tinydb::Database;
-//! 
+//!
 //! /// A structure to test the capabilities of TinyDB. This requires [Hash],
 //! /// [Eq], [Serialize] and [Deserialize] (final two being for file operations).
 //! #[derive(Hash, Eq)]
@@ -43,23 +43,23 @@
 //!     age: i32,
 //!     other_int: i8
 //! }
-//! 
+//!
 //! fn main() {
 //!     let mut db = Database::new(
 //!         String::from("test-db"),
 //!         None,
 //!         false
 //!     ); // Creates the database.
-//! 
+//!
 //!     db.add_item(
 //!         ExampleStruct { age: 595, other_int: 34 }
 //!     ); // Adds an item to the database.
-//! 
+//!
 //!     let got_item = db.query_item(
 //!         |s: ExampleStruct| s.age,
 //!         595
 //!     ).unwrap(); // Returns the item with [ExampleStruct::age] of 595.
-//! 
+//!
 //!     db.remove_item(got_item).unwrap(); // Will remove the item found from the database
 //! }
 //! ```
@@ -89,7 +89,7 @@ pub mod error;
 pub struct Database<T: hash::Hash + Eq> {
     /// Friendly name for the database, preferibly in `slug-form-like-this` as
     /// this is the fallback path.
-    /// 
+    ///
     /// This is used when dumping the database without a [Database::save_path]
     /// being defined and a friendly way to order a database.
     pub label: String,
@@ -97,7 +97,7 @@ pub struct Database<T: hash::Hash + Eq> {
     /// The overwrite path to save the database as, this is reccomended otherwise
     /// it will end up as `./Hello\ There.tinydb` if [Database::label] is "Hello
     /// There".
-    /// 
+    ///
     /// Primarily used inside of [Database::dump_db].
     pub save_path: Option<PathBuf>,
 
@@ -183,17 +183,20 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
         return Ok(());
     }
 
-    /// **WORK IN PROGRESS** - Replaces an item inside of the database with another
+    /// Replaces an item inside of the database with another
     /// item, used for updating/replacing items easily.
     ///
     /// [Database::query_item] can be used in conjunction to find and replace
     /// values individually if needed.
-    pub fn update_item(&mut self, item: &mut T, new: T) -> Result<(), error::DatabaseError> {
-        unimplemented!();
+    pub fn update_item(&mut self, item: &T, new: T) -> Result<(), error::DatabaseError> {
+        self.remove_item(item)?;
+        self.add_item(new)?;
+
+        Ok(())
     }
 
     /// Removes an item from the database.
-    /// 
+    ///
     /// See [Database::update_item] if you'd like to update/replace an item easily,
     /// rather than individually deleting and adding.
     ///
@@ -201,21 +204,21 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     ///
     /// Will return [error::DatabaseError::ItemNotFound] if the item that is attempting
     /// to be deleted was not found.
-    pub fn remove_item(&mut self, item: T) -> Result<(), error::DatabaseError> {
-        if self.items.remove(&item) {
+    pub fn remove_item(&mut self, item: &T) -> Result<(), error::DatabaseError> {
+        if self.items.remove(item) {
             Ok(())
         } else {
             Err(error::DatabaseError::ItemNotFound)
         }
     }
 
-    /// **WORK IN PROGRESS** - Gets all items from [Database] and returns a
+    /// Gets all items from [Database] and returns a
     /// reference to the native HashSet storage used.
     ///
     /// The resulting [HashSet] will be the entirety of the database (though as
     /// a referance) so act carefully when handling.
     pub fn read_db(&self) -> &HashSet<T> {
-        unimplemented!();
+        &self.items
     }
 
     /// Dumps/saves database to a binary file.
@@ -391,7 +394,7 @@ mod tests {
         };
 
         my_db.add_item(testing_struct.clone())?;
-        my_db.remove_item(testing_struct)?;
+        my_db.remove_item(&testing_struct)?;
 
         Ok(())
     }
@@ -491,5 +494,39 @@ mod tests {
         let mut db = Database::new(String::from("Contains example"), None, false);
         db.add_item(exp_struct.clone()).unwrap();
         assert_eq!(db.contains(&exp_struct), true);
+    }
+
+    /// Gets all items from the database using [Database::read_db] (ensures it
+    /// works correctly).
+    #[test]
+    fn get_all_items() -> Result<(), error::DatabaseError> {
+        let mut db = Database::new(String::from("Items test"), None, false);
+
+        db.add_item(DemoStruct {
+            name: String::from("Peter"),
+            age: 56,
+        })?;
+        db.add_item(DemoStruct {
+            name: String::from("Mandy"),
+            age: 24,
+        })?;
+
+        let exp_set: HashSet<DemoStruct> = vec![
+            DemoStruct {
+                name: String::from("Peter"),
+                age: 56,
+            },
+            DemoStruct {
+                name: String::from("Mandy"),
+                age: 24,
+            },
+        ]
+        .iter()
+        .cloned()
+        .collect();
+
+        assert_eq!(db.read_db(), &exp_set);
+
+        Ok(())
     }
 }
