@@ -6,7 +6,7 @@ readme = "README.md"
 authors = ["Owez <owez@scalist.net>"]
 edition = "2018"
 repository = "https://gitlab.com/Owez/tinydb"
-license = "GPL-3.0"
+license = "MIT"
 
 [dependencies.bincode] # Dumping to binary
 version = "1.2.0"
