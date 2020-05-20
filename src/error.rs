@@ -31,4 +31,10 @@ pub enum DatabaseError {
     /// When the database could not be found. This is typically raised inside of
     /// [crate::Database::from] when it tries to retrieve the path to the database.
     DatabaseNotFound,
+
+    /// When the given database name to an assumption-making function like
+    /// [crate::Database::auto_from] does not have a valid
+    /// [std::path::Pathbuf::file_stem] or could not convert from an
+    /// [std::ffi::OsString] to a [String].
+    BadDbName,
 }

@@ -1,15 +1,16 @@
 //! # About
 //!
-//! A small-footprint database implamentation, originally designed for the
-//! [Zeno](https://gitlab.com/zeno-src/zeno) code editor. This database does not
-//! accept duplicates and will not save a second identical item.
+//! A small-footprint, superfast database implamentation.
 //!
 //! Under the surface, tinydb uses a [HashSet]-based table that works in a similar
 //! fashion to SQL-like/Grid based databases.
 //!
-//! # Disclaimer
 //!
-//! This project is not intended to be used inside of any critical systems due to
+//! # Implamentation notes
+//!
+//! - This database does not save 2 duplicated items, either ignoring or raising an
+//! error depending on end-user preference.
+//! - This project is not intended to be used inside of any critical systems due to
 //! the nature of dumping/recovery. If you are using this crate as a temporary and
 //! in-memory only database, it should preform at a reasonable speed (as it uses
 //! [HashSet] underneath).
@@ -18,16 +19,17 @@
 //!
 //! Some commonly-used operations for the [Database] structure.
 //!
-//! | Operation                 | Implamentation          |
-//! |---------------------------|-------------------------|
-//! | Create database           | [Database::new]         |
-//! | Create database from file | [Database::from]        |
-//! | Query for item            | [Database::query_item]  |
-//! | Contains specific item    | [Database::contains]    |
-//! | Update/replace item       | [Database::update_item] |
-//! | Delete item               | [Database::remove_item] |
-//! | Get all items             | [Database::read_db]     |
-//! | Dump database             | [Database::dump_db]     |
+//! | Operation                               | Implamentation          |
+//! |-----------------------------------------|-------------------------|
+//! | Create database                         | [Database::new]         |
+//! | Create database from file               | [Database::from]        |
+//! | Load database or create if non-existant | [Database::auto_from]   |
+//! | Query for item                          | [Database::query_item]  |
+//! | Contains specific item                  | [Database::contains]    |
+//! | Update/replace item                     | [Database::update_item] |
+//! | Delete item                             | [Database::remove_item] |
+//! | Get all items                           | [Database::read_db]     |
+//! | Dump database                           | [Database::dump_db]     |
 
 #![doc(
     html_logo_url = "https://gitlab.com/Owez/tinydb/raw/master/logo.png",
@@ -91,7 +93,8 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
 
     /// Creates a database from a `.tinydb` file.
     ///
-    /// This retrives a dump file (saved database) from the path given and loads it as the [Database] structure.
+    /// This retrives a dump file (saved database) from the path given and loads
+    /// it as the [Database] structure.
     ///
     /// # Examples
     ///
@@ -132,6 +135,59 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
         let decoded: Database<T> = bincode::deserialize(&stream[..]).unwrap();
 
         Ok(decoded)
+    }
+
+    /// Loads database from existant path or creates a new one if it doesn't already
+    /// exist.
+    ///
+    /// This is the reccomended way to use TinyDB if you are wanting to easily
+    /// setup an entire database instance in a short, consise manner. Similar to
+    /// [Database::new] and [Database::from], this function will also have to be
+    /// given a strict type argument.
+    ///
+    /// This function does make some assumptions about the database name and uses
+    /// the 2nd to last part before a `.`. This means that `x.y.z` will have the
+    /// name of `y`, not `x` so therefore it is reccomended to have a database
+    /// path with `x.tinydb` or `x.db` only. It also assumes that duplications
+    /// are **not allowed** as it's better to be safe than sorry.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use tinydb::*;
+    /// use std::path::PathBuf;
+    /// use serde::{Serialize, Deserialize};
+    ///
+    /// /// Small example structure to show.
+    /// #[derive(Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
+    /// struct ExampleStruct {
+    ///    data: i32
+    /// }
+    ///
+    /// fn main() {
+    ///     let dummy_db: Database<ExampleStruct> = Database::new(String::from("cool"), None, false); // create demo db for `db_from`
+    ///
+    ///     let db_from_path = PathBuf::from("cool.tinydb");
+    ///     let db_from: Database<ExampleStruct> = Database::auto_from(db_from_path).unwrap(); // automatically load it
+    ///
+    ///     let db_new_path = PathBuf::from("xyz.tinydb");
+    ///     let db_new: Database<ExampleStruct> = Database::auto_from(db_new_path).unwrap(); // automatically create new as "xyz" doesn't exist
+    /// }
+    /// ```
+    pub fn auto_from(path: PathBuf) -> Result<Self, error::DatabaseError> {
+        if path.exists() {
+            Database::from(path)
+        } else {
+            let db_name = match path.file_stem() {
+                Some(x) => match x.to_str() {
+                    Some(y) => String::from(y),
+                    None => return Err(error::DatabaseError::BadDbName),
+                },
+                None => return Err(error::DatabaseError::BadDbName),
+            };
+
+            Ok(Database::new(db_name, Some(path), true))
+        }
     }
 
     /// Adds a new item to the in-memory database.
@@ -205,7 +261,7 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
         Ok(())
     }
 
-    /// **WORK IN PROGRESS** - Query the database for a specific item.
+    /// Query the database for a specific item.
     ///
     /// # Syntax
     ///
@@ -495,5 +551,19 @@ mod tests {
         assert_eq!(db.read_db(), &exp_set);
 
         Ok(())
+    }
+
+    /// Tests [Database::auto_from]'s ability to create new databases and fetch
+    /// already existing ones; an all-round test of its purpose.
+    #[test]
+    fn auto_from_creation() {
+        let _dummy_db: Database<DemoStruct> =
+            Database::new(String::from("alreadyexists"), None, false);
+
+        let from_db_path = PathBuf::from("alreadyexists.tinydb");
+        let _from_db: Database<DemoStruct> = Database::auto_from(from_db_path).unwrap();
+
+        let new_db_path = PathBuf::from("nonexistant.tinydb");
+        let _net_db: Database<DemoStruct> = Database::auto_from(new_db_path).unwrap();
     }
 }

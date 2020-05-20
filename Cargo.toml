@@ -1,7 +1,7 @@
 [package]
 name = "tinydb"
 description = "TinyDB (or tinydb) is a small-footprint, in-memory database; designed for the Zeno editor (https://gitlab.com/zeno-src/)."
-version = "0.0.3"
+version = "0.0.4"
 readme = "README.md"
 authors = ["Owez <owez@scalist.net>"]
 edition = "2018"
