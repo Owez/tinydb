@@ -143,13 +143,13 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     /// This is the reccomended way to use TinyDB if you are wanting to easily
     /// setup an entire database instance in a short, consise manner. Similar to
     /// [Database::new] and [Database::from], this function will also have to be
-    /// given a strict type argument.
+    /// given a strict type argument and you will still have to provide `script_dupes`
+    /// even if the database is likely to load an existing one.
     ///
     /// This function does make some assumptions about the database name and uses
     /// the 2nd to last part before a `.`. This means that `x.y.z` will have the
     /// name of `y`, not `x` so therefore it is reccomended to have a database
-    /// path with `x.tinydb` or `x.db` only. It also assumes that duplications
-    /// are **not allowed** as it's better to be safe than sorry.
+    /// path with `x.tinydb` or `x.db` only.
     ///
     /// # Examples
     ///
@@ -168,13 +168,13 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     ///     let dummy_db: Database<ExampleStruct> = Database::new(String::from("cool"), None, false); // create demo db for `db_from`
     ///
     ///     let db_from_path = PathBuf::from("cool.tinydb");
-    ///     let db_from: Database<ExampleStruct> = Database::auto_from(db_from_path).unwrap(); // automatically load it
+    ///     let db_from: Database<ExampleStruct> = Database::auto_from(db_from_path, false).unwrap(); // automatically load it
     ///
     ///     let db_new_path = PathBuf::from("xyz.tinydb");
-    ///     let db_new: Database<ExampleStruct> = Database::auto_from(db_new_path).unwrap(); // automatically create new as "xyz" doesn't exist
+    ///     let db_new: Database<ExampleStruct> = Database::auto_from(db_new_path, false).unwrap(); // automatically create new as "xyz" doesn't exist
     /// }
     /// ```
-    pub fn auto_from(path: PathBuf) -> Result<Self, error::DatabaseError> {
+    pub fn auto_from(path: PathBuf, strict_dupes: bool) -> Result<Self, error::DatabaseError> {
         if path.exists() {
             Database::from(path)
         } else {
@@ -186,7 +186,7 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
                 None => return Err(error::DatabaseError::BadDbName),
             };
 
-            Ok(Database::new(db_name, Some(path), true))
+            Ok(Database::new(db_name, Some(path), strict_dupes))
         }
     }
 
@@ -561,9 +561,9 @@ mod tests {
             Database::new(String::from("alreadyexists"), None, false);
 
         let from_db_path = PathBuf::from("alreadyexists.tinydb");
-        let _from_db: Database<DemoStruct> = Database::auto_from(from_db_path).unwrap();
+        let _from_db: Database<DemoStruct> = Database::auto_from(from_db_path, false).unwrap();
 
         let new_db_path = PathBuf::from("nonexistant.tinydb");
-        let _net_db: Database<DemoStruct> = Database::auto_from(new_db_path).unwrap();
+        let _net_db: Database<DemoStruct> = Database::auto_from(new_db_path, false).unwrap();
     }
 }
