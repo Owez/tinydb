@@ -52,7 +52,7 @@ pub mod error;
 /// conventional database model and should implament [hash::Hash] and [Eq] for
 /// basic in-memory storage with [Serialize] and [Deserialize] being implamented
 /// for file operations involving the database (these are also required).
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Database<T: hash::Hash + Eq> {
     /// Friendly name for the database, preferibly in `slug-form-like-this` as
     /// this is the fallback path.
