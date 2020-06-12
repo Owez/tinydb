@@ -1,6 +1,6 @@
 # TinyDB
 
-**Note not affiliated with the python [tinydb](https://tinydb.readthedocs.io/en/latest/), accidental naming error**
+**Note: not affiliated with the python [tinydb](https://tinydb.readthedocs.io/en/latest/), accidental naming error**
 
 TinyDB or `tinydb` is a small-footprint, superfast database designed to be used in-memory and easily dumped/retrieved from a file when it's time to save. ✨
 
