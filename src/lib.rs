@@ -1,10 +1,7 @@
 //! # About
 //!
-//! A small-footprint, superfast database implamentation.
-//!
-//! Under the surface, tinydb uses a [HashSet]-based table that works in a similar
-//! fashion to SQL-like/Grid based databases.
-//!
+//! TinyDB or `tinydb` is a small-footprint, superfast database designed to be used
+//! in-memory and easily dumped/retrieved from a file when it's time to save. ✨
 //!
 //! # Implamentation notes
 //!
@@ -32,8 +29,8 @@
 //! | Dump database                           | [Database::dump_db]     |
 
 #![doc(
-    html_logo_url = "https://gitlab.com/Owez/tinydb/raw/master/logo.png",
-    html_favicon_url = "https://gitlab.com/Owez/tinydb/raw/master/logo.png"
+    html_logo_url = "https://github.com/scOwez/tinydb/raw/master/logo.png",
+    html_favicon_url = "https://github.com/scOwez/tinydb/raw/master/logo.png"
 )]
 
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
