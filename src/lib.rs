@@ -61,7 +61,7 @@ pub struct Database<T: hash::Hash + Eq> {
     /// being defined and a friendly way to order a database.
     pub label: String,
 
-    /// The overwrite path to save the database as, this is reccomended otherwise
+    /// The overwrite path to save the database as, this is recommended otherwise
     /// it will end up as `./Hello\ There.tinydb` if [Database::label] is "Hello
     /// There".
     ///
@@ -140,7 +140,7 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     /// Loads database from existant path or creates a new one if it doesn't already
     /// exist.
     ///
-    /// This is the reccomended way to use TinyDB if you are wanting to easily
+    /// This is the recommended way to use TinyDB if you are wanting to easily
     /// setup an entire database instance in a short, consise manner. Similar to
     /// [Database::new] and [Database::from], this function will also have to be
     /// given a strict type argument and you will still have to provide `script_dupes`
@@ -148,7 +148,7 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     ///
     /// This function does make some assumptions about the database name and uses
     /// the 2nd to last part before a `.`. This means that `x.y.z` will have the
-    /// name of `y`, not `x` so therefore it is reccomended to have a database
+    /// name of `y`, not `x` so therefore it is recommended to have a database
     /// path with `x.tinydb` or `x.db` only.
     ///
     /// # Examples
