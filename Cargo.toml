@@ -1,16 +1,2 @@
-[package]
-name = "tinydb"
-description = "TinyDB or `tinydb` is a small-footprint, superfast database designed to be used in-memory and easily dumped/retrieved from a file when it's time to save. ✨"
-version = "0.0.7"
-readme = "README.md"
-authors = ["Owez <owez@scalist.net>"]
-edition = "2018"
-repository = "https://gitlab.com/Owez/tinydb"
-license = "MIT"
-
-[dependencies]
-bincode = "1.2.0"
-
-[dependencies.serde]
-version = "1.0"
-features = ["derive"]
+[workspace]
+members = ["tinydb"]
