@@ -1,6 +1,6 @@
 # TinyDB
 
-**Note: This project is not affiliated with the python [tinydb](https://tinydb.readthedocs.io/en/latest/), accidental naming error from when this project was started. See [renaming](https://github.com/scOwez/tinydb/issues/3) for updates.**
+**Note: This project is not affiliated with the Python [TinyDB](https://tinydb.readthedocs.io/en/latest/), accidental naming error from when this project was started. See [renaming](https://github.com/scOwez/tinydb/issues/3) for updates.**
 
 TinyDB or `tinydb` is a small-footprint, superfast database designed to be used in-memory and easily dumped/retrieved from a file when it's time to save. ✨
 

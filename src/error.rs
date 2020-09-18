@@ -1,16 +1,5 @@
 //! Contains various items related to errors inside of TinyDB.
 
-/// An error enum for the possible faliure states of [crate::Database::query_item]
-/// but relating directly to querying.
-#[derive(Debug)]
-pub enum QueryError {
-    /// An error was returned from the database itself.
-    DatabaseError(DatabaseError),
-
-    /// The database does not contain the query searched for.
-    ItemNotFound,
-}
-
 /// An error enum for the possible faliure states of the [crate::Database] structure.
 #[derive(Debug)]
 pub enum DatabaseError {
@@ -37,4 +26,10 @@ pub enum DatabaseError {
     /// [std::path::Pathbuf::file_stem] or could not convert from an
     /// [std::ffi::OsString] to a [String].
     BadDbName,
+}
+
+impl From<std::io::Error> for DatabaseError {
+    fn from(e: std::io::Error) -> Self {
+        DatabaseError::IOError(e)
+    }
 }

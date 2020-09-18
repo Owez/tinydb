@@ -3,7 +3,7 @@
 //! TinyDB or `tinydb` is a small-footprint, superfast database designed to be used
 //! in-memory and easily dumped/retrieved from a file when it's time to save. ✨
 //!
-//! # Implamentation notes
+//! # Implementation notes
 //!
 //! - This database does not save 2 duplicated items, either ignoring or raising an
 //! error depending on end-user preference.
@@ -25,12 +25,11 @@
 //! | Contains specific item                  | [Database::contains]    |
 //! | Update/replace item                     | [Database::update_item] |
 //! | Delete item                             | [Database::remove_item] |
-//! | Get all items                           | [Database::read_db]     |
 //! | Dump database                           | [Database::dump_db]     |
 
 #![doc(
-    html_logo_url = "https://github.com/scOwez/tinydb/raw/master/logo.png",
-    html_favicon_url = "https://github.com/scOwez/tinydb/raw/master/logo.png"
+    html_logo_url = "https://github.com/Owez/tinydb/raw/master/logo.png",
+    html_favicon_url = "https://github.com/Owez/tinydb/raw/master/logo.png"
 )]
 
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -52,15 +51,15 @@ pub mod error;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Database<T: hash::Hash + Eq> {
     /// Friendly name for the database, preferibly in `slug-form-like-this` as
-    /// this is the fallback path.
+    /// this is the fallback path
     ///
     /// This is used when dumping the database without a [Database::save_path]
-    /// being defined and a friendly way to order a database.
+    /// being defined and a friendly way to order a database
     pub label: String,
 
     /// The overwrite path to save the database as, this is recommended otherwise
     /// it will end up as `./Hello\ There.tinydb` if [Database::label] is "Hello
-    /// There".
+    /// There"
     ///
     /// Primarily used inside of [Database::dump_db].
     pub save_path: Option<PathBuf>,
@@ -70,8 +69,8 @@ pub struct Database<T: hash::Hash + Eq> {
     /// duplicates, it just doesn't flag an error.
     pub strict_dupes: bool,
 
-    /// In-memory [HashSet] of all items.
-    items: HashSet<T>,
+    /// In-memory [HashSet] of all items
+    pub items: HashSet<T>,
 }
 
 impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
@@ -81,9 +80,9 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     /// - If you'd like to load a dumped database, use [Database::from].
     pub fn new(label: String, save_path: Option<PathBuf>, strict_dupes: bool) -> Self {
         Database {
-            label: label,
-            save_path: save_path,
-            strict_dupes: strict_dupes,
+            label,
+            save_path,
+            strict_dupes,
             items: HashSet::new(),
         }
     }
@@ -232,15 +231,6 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
         }
     }
 
-    /// Gets all items from [Database] and returns a
-    /// reference to the native HashSet storage used.
-    ///
-    /// The resulting [HashSet] will be the entirety of the database (though as
-    /// a referance) so act carefully when handling.
-    pub fn read_db(&self) -> &HashSet<T> {
-        &self.items
-    }
-
     /// Dumps/saves database to a binary file.
     ///
     /// # Saving path methods
@@ -296,18 +286,18 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
         &self,
         value: V,
         query: Q,
-    ) -> Result<&T, error::QueryError> {
+    ) -> Result<&T, error::DatabaseError> {
         for item in self.items.iter() {
             if value(item) == &query {
                 return Ok(item);
             }
         }
 
-        Err(error::QueryError::ItemNotFound)
+        Err(error::DatabaseError::ItemNotFound)
     }
 
     /// Searches the database for a specific value. If it does not exist, this
-    /// method will return [error::QueryError::ItemNotFound].
+    /// method will return [error::DatabaseError::ItemNotFound].
     ///
     /// This is a wrapper around [HashSet::contains].
     ///
@@ -340,10 +330,10 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
         let definate_path = self.smart_path_get();
 
         if definate_path.exists() {
-            io_to_dberror(std::fs::remove_file(&definate_path))?;
+            std::fs::remove_file(&definate_path)?;
         }
 
-        io_to_dberror(File::create(&definate_path))
+        Ok(File::create(&definate_path)?)
     }
 
     /// Automatically allocates a path for the database if [Database::save_path]
@@ -363,20 +353,12 @@ fn get_stream_from_path(path: PathBuf) -> Result<Vec<u8>, error::DatabaseError> 
         return Err(error::DatabaseError::DatabaseNotFound);
     }
 
-    let mut file = io_to_dberror(File::open(path))?;
+    let mut file = File::open(path)?;
     let mut buffer = Vec::new();
 
-    io_to_dberror(file.read_to_end(&mut buffer))?;
+    file.read_to_end(&mut buffer)?;
 
     Ok(buffer)
-}
-
-/// Converts a possible [std::io::Error] to a [error::DatabaseError].
-fn io_to_dberror<T>(io_res: Result<T, std::io::Error>) -> Result<T, error::DatabaseError> {
-    match io_res {
-        Ok(x) => Ok(x),
-        Err(e) => Err(error::DatabaseError::IOError(e)),
-    }
 }
 
 #[cfg(test)]
@@ -514,40 +496,6 @@ mod tests {
         let mut db = Database::new(String::from("Contains example"), None, false);
         db.add_item(exp_struct.clone()).unwrap();
         assert_eq!(db.contains(&exp_struct), true);
-    }
-
-    /// Gets all items from the database using [Database::read_db] (ensures it
-    /// works correctly).
-    #[test]
-    fn get_all_items() -> Result<(), error::DatabaseError> {
-        let mut db = Database::new(String::from("Items test"), None, false);
-
-        db.add_item(DemoStruct {
-            name: String::from("Peter"),
-            age: 56,
-        })?;
-        db.add_item(DemoStruct {
-            name: String::from("Mandy"),
-            age: 24,
-        })?;
-
-        let exp_set: HashSet<DemoStruct> = vec![
-            DemoStruct {
-                name: String::from("Peter"),
-                age: 56,
-            },
-            DemoStruct {
-                name: String::from("Mandy"),
-                age: 24,
-            },
-        ]
-        .iter()
-        .cloned()
-        .collect();
-
-        assert_eq!(db.read_db(), &exp_set);
-
-        Ok(())
     }
 
     /// Tests [Database::auto_from]'s ability to create new databases and fetch
