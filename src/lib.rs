@@ -25,7 +25,7 @@
 //! 
 //! fn main() {
 //!     let my_struct = ExampleStruct { my_age: 329 };
-//!     let mut my_db = Database::new(String::from("query_test"), None, false);
+//!     let mut my_db = Database::new("query_test", None, false);
 //! 
 //!     my_db.add_item(my_struct.clone());
 //! 
@@ -147,7 +147,7 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     ///
     /// /// Makes a small testing database.
     /// fn make_db() {
-    ///     let mut test_db = Database::new(String::from("test"), None, false);
+    ///     let mut test_db = Database::new("test", None, false);
     ///     test_db.add_item(ExampleStruct { data: 34 });
     ///     test_db.dump_db();
     /// }
@@ -201,7 +201,7 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     /// }
     ///
     /// fn main() {
-    ///     let dummy_db: Database<ExampleStruct> = Database::new(String::from("cool"), None, false); // create demo db for `db_from`
+    ///     let dummy_db: Database<ExampleStruct> = Database::new("cool", None, false); // create demo db for `db_from`
     ///
     ///     let db_from_path = PathBuf::from("cool.tinydb");
     ///     let db_from: Database<ExampleStruct> = Database::auto_from(db_from_path, false).unwrap(); // automatically load it
@@ -315,7 +315,7 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     ///
     /// fn main() {
     ///     let my_struct = ExampleStruct { my_age: 329 };
-    ///     let mut my_db = Database::new(String::from("query_test"), None, false);
+    ///     let mut my_db = Database::new("query_test", None, false);
     ///
     ///     my_db.add_item(my_struct.clone());
     ///
@@ -356,7 +356,7 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     ///
     /// fn main() {
     ///     let exp_struct = ExampleStruct { item: 4942 };
-    ///     let mut db = Database::new(String::from("Contains example"), None, false);
+    ///     let mut db = Database::new("Contains example", None, false);
     ///
     ///     db.add_item(exp_struct.clone());
     ///

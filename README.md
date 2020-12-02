@@ -24,7 +24,7 @@ struct ExampleStruct {
 
 fn main() {
     let my_struct = ExampleStruct { my_age: 329 };
-    let mut my_db = Database::new(String::from("query_test"), None, false);
+    let mut my_db = Database::new("query_test", None, false);
 
     my_db.add_item(my_struct.clone());
 
