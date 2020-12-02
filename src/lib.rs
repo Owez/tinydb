@@ -118,10 +118,10 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     ///
     /// - To add a first item, use [Database::add_item].
     /// - If you'd like to load a dumped database, use [Database::from].
-    pub fn new(label: String, save_path: Option<PathBuf>, strict_dupes: bool) -> Self {
+    pub fn new(label: impl Into<String>, save_path: impl Into<Option<PathBuf>>, strict_dupes: bool) -> Self {
         Database {
-            label,
-            save_path,
+            label: label.into(),
+            save_path: save_path.into(),
             strict_dupes,
             items: HashSet::new(),
         }
@@ -166,8 +166,8 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     ///     ); // Check that the database still has added [ExampleStruct].
     /// }
     /// ```
-    pub fn from(path: PathBuf) -> Result<Self, error::DatabaseError> {
-        let stream = get_stream_from_path(path)?;
+    pub fn from(path: impl Into<PathBuf>) -> Result<Self, error::DatabaseError> {
+        let stream = get_stream_from_path(path.into())?;
         let decoded: Database<T> = bincode::deserialize(&stream[..]).unwrap();
 
         Ok(decoded)
@@ -210,11 +210,13 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
     ///     let db_new: Database<ExampleStruct> = Database::auto_from(db_new_path, false).unwrap(); // automatically create new as "xyz" doesn't exist
     /// }
     /// ```
-    pub fn auto_from(path: PathBuf, strict_dupes: bool) -> Result<Self, error::DatabaseError> {
-        if path.exists() {
-            Database::from(path)
+    pub fn auto_from(path: impl Into<PathBuf>, strict_dupes: bool) -> Result<Self, error::DatabaseError> {
+        let path_into = path.into();
+        
+        if path_into.exists() {
+            Database::from(path_into)
         } else {
-            let db_name = match path.file_stem() {
+            let db_name = match path_into.file_stem() {
                 Some(x) => match x.to_str() {
                     Some(y) => String::from(y),
                     None => return Err(error::DatabaseError::BadDbName),
@@ -222,7 +224,7 @@ impl<T: hash::Hash + Eq + Serialize + DeserializeOwned> Database<T> {
                 None => return Err(error::DatabaseError::BadDbName),
             };
 
-            Ok(Database::new(db_name, Some(path), strict_dupes))
+            Ok(Database::new(db_name, Some(path_into), strict_dupes))
         }
     }
 
@@ -415,7 +417,7 @@ mod tests {
     /// Tests addition to in-memory db
     #[test]
     fn item_add() -> Result<(), error::DatabaseError> {
-        let mut my_db = Database::new(String::from("Adding test"), None, true);
+        let mut my_db = Database::new("Adding test", None, true);
 
         my_db.add_item(DemoStruct {
             name: String::from("John"),
@@ -428,7 +430,7 @@ mod tests {
     /// Tests removal from in-memory db
     #[test]
     fn item_remove() -> Result<(), error::DatabaseError> {
-        let mut my_db = Database::new(String::from("Removal test"), None, true);
+        let mut my_db = Database::new("Removal test", None, true);
 
         let testing_struct = DemoStruct {
             name: String::from("Xander"),
