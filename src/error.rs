@@ -22,9 +22,8 @@ pub enum DatabaseError {
     DatabaseNotFound,
 
     /// When the given database name to an assumption-making function like
-    /// [crate::Database::auto_from] does not have a valid
-    /// [std::path::Pathbuf::file_stem] or could not convert from an
-    /// [std::ffi::OsString] to a [String].
+    /// [crate::Database::auto_from] does not have a valid file stem or could not
+    /// convert from an [std::ffi::OsString] to a [String].
     BadDbName,
 }
 
