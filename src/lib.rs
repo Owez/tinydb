@@ -1,8 +1,48 @@
-//! # About
-//!
-//! TinyDB or `tinydb` is a small-footprint, superfast database designed to be used
-//! in-memory and easily dumped/retrieved from a file when it's time to save. ✨
-//!
+//! > NOTE: This project is not affiliated with the Python [TinyDB](https://tinydb.readthedocs.io/en/latest/),
+//! accidental naming error from when this project was started. See
+//! [renaming](https://github.com/scOwez/tinydb/issues/3) for updates
+//! 
+//! TinyDB or `tinydb` is a small-footprint, superfast database designed to be
+//! used in-memory and easily dumped/retrieved from a file when it's time to save
+//! ✨
+//! 
+//! This database aims to provide an easy frontend to an efficiant in-memory
+//! database (that can also be dumped to a file). It purposefully disallows
+//! duplicate items to be sorted due to constraints with hash tables.
+//! 
+//! ## Example 🚀
+//! 
+//! A simple example of adding a structure then querying for it:
+//! 
+//! ```rust
+//! use serde::{Serialize, Deserialize};
+//! use tinydb::Database;
+//! 
+//! #[derive(Debug, Eq, PartialEq, Hash, Serialize, Deserialize, Clone)]
+//! struct ExampleStruct {
+//!     my_age: i32
+//! }
+//! 
+//! fn main() {
+//!     let my_struct = ExampleStruct { my_age: 329 };
+//!     let mut my_db = Database::new(String::from("query_test"), None, false);
+//! 
+//!     my_db.add_item(my_struct.clone());
+//! 
+//!     let results = my_db.query_item(|s: &ExampleStruct| &s.my_age, 329);
+//! 
+//!     assert_eq!(results.unwrap(), &my_struct);
+//! }
+//! ```
+//! 
+//! # Installation
+//! 
+//! Simply add the following to your `Cargo.toml` file:
+//! 
+//! ```toml
+//! [dependencies]
+//! tinydb = "1"
+//! ```
 //! # Implementation notes
 //!
 //! - This database does not save 2 duplicated items, either ignoring or raising an

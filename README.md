@@ -1,8 +1,8 @@
 # TinyDB
 
-**Note: This project is not affiliated with the Python [TinyDB](https://tinydb.readthedocs.io/en/latest/), accidental naming error from when this project was started. See [renaming](https://github.com/scOwez/tinydb/issues/3) for updates.**
+> NOTE: This project is not affiliated with the Python [TinyDB](https://tinydb.readthedocs.io/en/latest/), accidental naming error from when this project was started. See [renaming](https://github.com/scOwez/tinydb/issues/3) for updates
 
-TinyDB or `tinydb` is a small-footprint, superfast database designed to be used in-memory and easily dumped/retrieved from a file when it's time to save. ✨
+TinyDB or `tinydb` is a small-footprint, superfast database designed to be used in-memory and easily dumped/retrieved from a file when it's time to save ✨
 
 This database aims to provide an easy frontend to an efficiant in-memory database (that can also be dumped to a file). It purposefully disallows duplicate items to be sorted due to constraints with hash tables.
 
@@ -32,4 +32,13 @@ fn main() {
 
     assert_eq!(results.unwrap(), &my_struct);
 }
+```
+
+## Installation
+
+Simply add the following to your `Cargo.toml` file:
+
+```toml
+[dependencies]
+tinydb = "1"
 ```
